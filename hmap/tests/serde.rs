@@ -244,7 +244,7 @@ fn rejects_a_cursor_that_would_reissue_a_recorded_id() {
 #[test]
 fn a_reserved_id_round_trips() -> Result<()> {
     let mut g = fixture!(Un::undirected());
-    let (v, e) = (g.next_vertex_id(), g.next_edge_id());
+    let (v, e) = (g.next_vertex_id()?, g.next_edge_id()?);
     let json = serde_json::to_string(&g).unwrap();
     let mut back: Un = serde_json::from_str(&json).unwrap();
     assert_same!(g, back);

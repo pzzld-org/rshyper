@@ -128,3 +128,87 @@ fn test_dijkstra_multiple_paths() -> Result<()> {
 
     Ok(())
 }
+
+/// #122: the queue used to pop the most expensive vertex first, returning a cost-11 path.
+#[test]
+fn test_dijkstra_returns_the_cheapest_path() -> Result<()> {
+    use rshyper_core::Weight;
+    let mut graph = HyperMap::<(), usize>::undirected();
+    let [s, a, b, t] = [(); 4].map(|_| graph.add_vertex().unwrap());
+    graph.add_edge([s, a], Weight(1))?;
+    graph.add_edge([s, b], Weight(10))?;
+    graph.add_edge([a, b], Weight(1))?;
+    graph.add_edge([b, t], Weight(1))?;
+    assert_eq!(graph.dijkstra().find_path(s, t)?, [s, a, b, t]);
+    Ok(())
+}
+
+/// #122: zero-weight edges are valid and cost nothing.
+#[test]
+fn test_dijkstra_zero_weights() -> Result<()> {
+    use rshyper_core::Weight;
+    let mut graph = HyperMap::<(), usize>::undirected();
+    let [s, a, t] = [(); 3].map(|_| graph.add_vertex().unwrap());
+    graph.add_edge([s, t], Weight(1))?;
+    graph.add_edge([s, a], Weight(0))?;
+    graph.add_edge([a, t], Weight(0))?;
+    assert_eq!(graph.dijkstra().find_path(s, t)?, [s, a, t]);
+    Ok(())
+}
+
+/// #122: negative and NaN weights are rejected before the search, even when the cheap path
+/// would reach the goal without touching them.
+#[test]
+fn test_dijkstra_rejects_invalid_weights() -> Result<()> {
+    use rshyper_algo::Error;
+    use rshyper_core::Weight;
+
+    let mut graph = HyperMap::<(), i64>::undirected();
+    let [s, a, t] = [(); 3].map(|_| graph.add_vertex().unwrap());
+    graph.add_edge([s, t], Weight(1))?;
+    graph.add_edge([s, a], Weight(2))?;
+    graph.add_edge([a, t], Weight(-10))?;
+    assert!(matches!(
+        graph.dijkstra().find_path(s, t),
+        Err(Error::InvalidWeight)
+    ));
+
+    let mut graph = HyperMap::<(), f64>::undirected();
+    let [s, t] = [(); 2].map(|_| graph.add_vertex().unwrap());
+    graph.add_edge([s, t], Weight(f64::NAN))?;
+    assert!(matches!(
+        graph.dijkstra().find_path(s, t),
+        Err(Error::InvalidWeight)
+    ));
+    Ok(())
+}
+
+/// #122 (P-9): a path cost above `E::MAX` is an error, not an overflow panic or a wrap.
+#[test]
+fn test_dijkstra_cost_overflow_is_an_error() -> Result<()> {
+    use rshyper_algo::Error;
+    use rshyper_core::Weight;
+    let mut graph = HyperMap::<(), u8>::undirected();
+    let [s, a, t] = [(); 3].map(|_| graph.add_vertex().unwrap());
+    graph.add_edge([s, a], Weight(200))?;
+    graph.add_edge([a, t], Weight(200))?;
+    assert!(matches!(
+        graph.dijkstra().find_path(s, t),
+        Err(Error::CostOverflow)
+    ));
+    Ok(())
+}
+
+/// #122: directed graphs are rejected until ADR-DIR (#118) defines their semantics.
+#[test]
+fn test_dijkstra_rejects_directed_graphs() -> Result<()> {
+    use rshyper_algo::Error;
+    let mut graph = rshyper_hmap::DiHyperMap::<(), usize>::directed();
+    let [s, t] = [(); 2].map(|_| graph.add_vertex().unwrap());
+    graph.add_link([s, t])?;
+    assert!(matches!(
+        graph.dijkstra().find_path(s, t),
+        Err(Error::UnsupportedGraphKind(_))
+    ));
+    Ok(())
+}

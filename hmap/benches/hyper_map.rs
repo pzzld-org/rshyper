@@ -239,10 +239,55 @@ fn bench_hypermap_nodes(c: &mut Criterion) {
     group.finish();
 }
 
+/// building a graph vertex by vertex must stay near linear (#114): every `add_vertex` used to
+/// scan the whole node history.
+fn bench_hypermap_build(c: &mut Criterion) {
+    let mut group = c.benchmark_group("HyperMap::build");
+    group.sample_size(10);
+    for n in [20_000usize, 40_000, 80_000] {
+        group.bench_with_input(criterion::BenchmarkId::new("add_vertex", n), &n, |b, &n| {
+            b.iter_batched(
+                HyperMap::<(), ()>::new,
+                |mut graph| {
+                    for _ in 0..n {
+                        black_box(graph.add_vertex().expect("failed to add vertex"));
+                    }
+                    graph
+                },
+                BatchSize::LargeInput,
+            )
+        });
+        group.bench_with_input(
+            criterion::BenchmarkId::new("hashbrown_insert_baseline", n),
+            &n,
+            |b, &n| {
+                b.iter_batched(
+                    || {
+                        hashbrown::HashMap::<
+                            rshyper::idx::VertexId<usize>,
+                            rshyper::Node<(), usize>,
+                            hashbrown::DefaultHashBuilder,
+                        >::default()
+                    },
+                    |mut m| {
+                        for i in 0..n {
+                            let id = rshyper::idx::VertexId::new(i);
+                            m.insert(id, rshyper::Node::new(id, ()));
+                        }
+                        m
+                    },
+                    BatchSize::LargeInput,
+                )
+            },
+        );
+    }
+    group.finish();
+}
+
 criterion::criterion_group! {
     name = benches;
     config = Criterion::default().sample_size(SAMPLES).measurement_time(std::time::Duration::from_secs(DURATION)).with_plots().with_output_color(true);
-    targets = bench_hypermap, bench_hypermap_edges, bench_hypermap_nodes
+    targets = bench_hypermap, bench_hypermap_edges, bench_hypermap_nodes, bench_hypermap_build
 }
 
 criterion::criterion_main! {

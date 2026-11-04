@@ -9,7 +9,7 @@
 use alloc::boxed::Box;
 use rshyper::error::Error as CoreError;
 use rshyper::idx::RawIndex;
-/// a type alias for a [Result] with the crate-specific error type [`AlgoError`]
+/// a type alias for a [Result] with the crate-specific error type [`Error`]
 pub type Result<T = ()> = core::result::Result<T, Error>;
 
 /// The [`Error`] type enumerates the various errors encountered by algorithms and operators on
@@ -21,6 +21,19 @@ pub enum Error {
     NotFound(Box<dyn RawIndex>),
     #[error("No path found between the two points")]
     PathNotFound,
+    /// the search supports only undirected graphs until directed semantics are decided
+    /// (ADR-DIR, #118)
+    #[error("unsupported graph kind `{0}`: only undirected graphs are supported")]
+    UnsupportedGraphKind(&'static str),
+    /// an edge weight is negative, NaN or not finite
+    #[error("edge weights must be finite and non-negative")]
+    InvalidWeight,
+    /// a heuristic value is negative, NaN or not finite
+    #[error("heuristic values must be finite and non-negative")]
+    InvalidHeuristic,
+    /// a path cost exceeded the largest value of the weight type
+    #[error("the path cost overflowed the weight type")]
+    CostOverflow,
     #[error(transparent)]
     CoreError(#[from] CoreError),
 }

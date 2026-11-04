@@ -3,7 +3,7 @@
     Contrib: @FL03
 */
 
-/// A generic [`IndexBase`] implementation used to represent various [_kinds_](GraphIndex) of
+/// A generic [`IndexBase`] implementation used to represent various [_kinds_](super::IndexType) of
 /// indices
 #[derive(Clone, Copy, Hash, Ord, PartialOrd)]
 // ids serialize as their raw value, so they work as JSON map keys (#126)

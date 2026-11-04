@@ -53,8 +53,9 @@ pub trait GraphProps: 'static + Copy + Send + Sync {
         use core::any::TypeId;
         TypeId::of::<Self::Kind>() == TypeId::of::<Undirected>()
     }
-    /// returns the [`Mode`] of the graph
-    fn mode(&self) -> Mode {
+    /// returns the [`Mode`] of the graph, or `None` when the kind fixes no direction (a
+    /// `Mode`-kinded graph stores no runtime mode)
+    fn mode(&self) -> Option<Mode> {
         Mode::from_type::<Self::Kind>()
     }
 }

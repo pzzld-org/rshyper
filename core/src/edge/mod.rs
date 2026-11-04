@@ -2,12 +2,12 @@
     appellation: edges <module>
     authors: @FL03
 */
-//! this module focuses on the [`Edge`] implementation, providing additional types, traits, and
+//! this module focuses on the [`HyperEdge`] implementation, providing additional types, traits, and
 //! representations for edges in a hypergraph.
 #[doc(inline)]
 pub use self::{hyper_edge::HyperEdge, link::Link, traits::*, types::*, utils::*};
 
-/// the [`hyper_edge`] is responsible for defining the [`Edge`] struct
+/// the [`hyper_edge`] is responsible for defining the [`HyperEdge`] struct
 pub mod hyper_edge;
 pub mod link;
 

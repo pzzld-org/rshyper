@@ -52,15 +52,17 @@ impl Mode {
     pub const fn undirected() -> Self {
         Mode::Undirected
     }
-    /// returns the [`Mode`] corresponding to the given [`GraphType`].
-    pub fn from_type<T: GraphType>() -> Self {
+    /// returns the [`Mode`] corresponding to the given [`GraphType`], or `None` for a kind
+    /// that fixes no direction at the type level, such as [`Mode`] itself: a `Mode`-kinded
+    /// graph stores no runtime mode.
+    pub fn from_type<T: GraphType>() -> Option<Self> {
         use core::any::TypeId;
         if TypeId::of::<T>() == TypeId::of::<Directed>() {
-            Mode::Directed
+            Some(Mode::Directed)
         } else if TypeId::of::<T>() == TypeId::of::<Undirected>() {
-            Mode::Undirected
+            Some(Mode::Undirected)
         } else {
-            panic! { "An unsupported graph type was provided." }
+            None
         }
     }
     /// returns the [`GraphType`] corresponding to this mode.

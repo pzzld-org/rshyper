@@ -15,8 +15,9 @@ use hashbrown::HashSet;
 use num_traits::bounds::UpperBounded;
 use num_traits::{FromPrimitive, Num};
 use rshyper_core::edge::RawEdge;
+use rshyper_core::edge::RawSurface;
 use rshyper_core::idx::{HyperIndex, RawIndex, VertexId, VertexSet};
-use rshyper_core::{GraphProps, HyperGraph, HyperGraphIter};
+use rshyper_core::{GraphProps, HyperGraph, HyperGraphIter, HyperGraphIterEdge, Undirected};
 
 impl<'a, N, E, A, H, S> Dijkstra<'a, N, E, A, H, S>
 where
@@ -144,11 +145,23 @@ where
     }
 }
 
+/// Shortest paths over the undirected co-member 2-section: a step goes from a vertex to any
+/// other member of an incident hyperedge, and costs that hyperedge's weight. The cost of a
+/// path is the sum of its steps' weights.
+///
+/// # Errors
+///
+/// - [`Error::UnsupportedGraphKind`] unless the graph is `Undirected` (directed semantics are
+///   not decided yet, #118).
+/// - [`Error::InvalidWeight`] if any edge weight is negative, NaN or above `E::max_value()`;
+///   checked over every edge before the search starts.
+/// - [`Error::CostOverflow`] if a path cost would exceed `E::max_value()`.
+/// - [`Error::PathNotFound`] if `dest` is unreachable.
 impl<'a, N, E, A, H, S> PathFinder<A::Ix> for Dijkstra<'a, N, E, A, H, S>
 where
     E: Copy + Default + PartialOrd + FromPrimitive + Num + UpperBounded,
     A: GraphProps,
-    H: HyperGraph<N, E, A>,
+    H: HyperGraphIterEdge<N, E, A>,
     S: BuildHasher,
     A::Ix: HyperIndex,
     <H::Edge<E> as RawEdge>::Store: Clone + IntoIterator<Item = VertexId<A::Ix>>,
@@ -163,6 +176,20 @@ where
         }
         if !self.graph.contains_node(&dest) {
             return Err(rshyper::Error::NodeNotFound.into());
+        }
+        if core::any::TypeId::of::<A::Kind>() != core::any::TypeId::of::<Undirected>() {
+            return Err(Error::UnsupportedGraphKind(
+                core::any::type_name::<A::Kind>(),
+            ));
+        }
+        // Dijkstra is only correct for non-negative weights; NaN fails both comparisons
+        let valid = |w: &E| *w >= E::zero() && *w <= E::max_value();
+        if !self
+            .graph
+            .iter_surfaces()
+            .all(|(_, edge)| valid(edge.weight().get()))
+        {
+            return Err(Error::InvalidWeight);
         }
 
         let mut heap: BinaryHeap<QueueNode<A::Ix, E>> = BinaryHeap::new();
@@ -187,20 +214,15 @@ where
             // For each neighbor via hyperedges
             for edge_id in self.graph.find_edges_with_node(&u) {
                 // load the weight of the edge
-                let weight = self
-                    .graph
-                    .get_edge_weight(edge_id)
-                    .expect("no weight for the edge")
-                    .view();
+                let weight = self.graph.get_edge_weight(edge_id)?.view();
                 // visit each node within the hyperedge
-                for v in self
-                    .graph
-                    .get_edge_domain(edge_id)
-                    .expect("empty hyperedge")
-                    .clone()
-                {
+                for v in self.graph.get_edge_domain(edge_id)?.clone() {
                     if v == u {
                         continue;
+                    }
+                    // weights are in [0, max], so `max - u_cost` cannot underflow
+                    if **weight > E::max_value() - u_cost {
+                        return Err(Error::CostOverflow);
                     }
                     let alt = u_cost + **weight;
                     if alt < *self.distances().get(&v).unwrap_or(&E::max_value()) {

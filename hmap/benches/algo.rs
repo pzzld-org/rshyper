@@ -46,7 +46,7 @@ fn bench_hypermap_search(c: &mut Criterion) {
 }
 
 /// benchmarks for search algorithms in the [`HyperMap`] implementation.
-fn _bench_hypermap_path_finders(c: &mut Criterion) {
+fn bench_hypermap_path_finders(c: &mut Criterion) {
     // a dummy hueristic function that returns a constant value
     pub fn hue<T>(_a: VertexId, _b: VertexId) -> T
     where
@@ -67,7 +67,7 @@ fn _bench_hypermap_path_finders(c: &mut Criterion) {
         &(VertexId::zero(), VertexId::random_between(0..N)),
         |b, &(src, tgt)| {
             b.iter_batched(
-                setup,
+                setup_paths,
                 |graph| {
                     // use the a8 algorithm to find a path between two vertices
                     graph
@@ -85,7 +85,7 @@ fn _bench_hypermap_path_finders(c: &mut Criterion) {
         &(VertexId::zero(), VertexId::random_between(0..N)),
         |b, &(src, tgt)| {
             b.iter_batched(
-                setup,
+                setup_paths,
                 |graph| {
                     // use the dijkstra algorithm to find a path between two vertices
                     graph
@@ -104,7 +104,7 @@ fn _bench_hypermap_path_finders(c: &mut Criterion) {
 criterion::criterion_group! {
     name = benches;
     config = Criterion::default().sample_size(SAMPLES).measurement_time(std::time::Duration::from_secs(DURATION)).with_plots().with_output_color(true);
-    targets = bench_hypermap_search
+    targets = bench_hypermap_search, bench_hypermap_path_finders
 }
 
 criterion::criterion_main! {
@@ -161,6 +161,18 @@ mod ext {
                 .expect("failed to add surface");
         }
 
+        graph
+    }
+
+    /// [`setup`] with every edge weight mapped into `0..100`: Dijkstra rejects negative
+    /// weights, and small ones keep path costs far from overflow
+    pub fn setup_paths() -> HyperMap<Wt, Wt> {
+        let mut graph = setup();
+        let ids = graph.edges().keys().copied().collect::<Vec<_>>();
+        for id in ids {
+            let w = graph.get_edge_weight_mut(&id).expect("missing edge");
+            **w = w.rem_euclid(100);
+        }
         graph
     }
 }

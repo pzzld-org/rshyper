@@ -139,15 +139,15 @@ where
         self.value -= T::one();
     }
     /// increments the index value by [one](One) and consumes the current instance
-    /// to create another with the new value.
+    /// to create another with the new value. It overflows exactly as `+` does on `T`; use
+    /// [`step`](IndexBase::step) for a checked increment.
     #[inline]
     pub fn inc(self) -> IndexBase<<T as core::ops::Add>::Output, K>
     where
         T: core::ops::Add + One,
         <T as core::ops::Add>::Output: RawIndex,
     {
-        self.next_with(|prev| prev + T::one())
-            .expect("Failed to increment index")
+        IndexBase::new(self.value + T::one())
     }
     /// mutably increments the index value by [`1`](One)
     #[inline]
@@ -160,7 +160,9 @@ where
     /// increments the current index and returns the previous instance of the index.
     ///
     /// ```rust
-    ///     use rshyper_core::EdgeId;
+    /// use rshyper_core::EdgeId;
+    ///
+    /// fn main() -> rshyper_core::Result<()> {
     ///     let mut edge_id = EdgeId::<usize>::zero();
     ///     let e0 = edge_id.step()?;
     ///     let e1 = edge_id.step()?;
@@ -168,13 +170,24 @@ where
     ///     assert_eq!(e0.get(), &0);
     ///     assert_eq!(e1.get(), &1);
     ///     assert_eq!(e2.get(), &2);
+    ///     Ok(())
+    /// }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// [`IndexError::IndexOutOfBounds`] when the next value would overflow `T`; the index is
+    /// left unchanged.
     #[inline]
     pub fn step(&mut self) -> Result<Self, IndexError>
     where
         T: AddStep<Output = T>,
     {
-        let prev = self.get_mut().add_step();
+        let next = self
+            .get()
+            .checked_step()
+            .ok_or(IndexError::IndexOutOfBounds)?;
+        let prev = core::mem::replace(self.get_mut(), next);
         Ok(IndexBase {
             value: prev,
             _type: core::marker::PhantomData::<K>,
