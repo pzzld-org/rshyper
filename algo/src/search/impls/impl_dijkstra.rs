@@ -214,18 +214,9 @@ where
             // For each neighbor via hyperedges
             for edge_id in self.graph.find_edges_with_node(&u) {
                 // load the weight of the edge
-                let weight = self
-                    .graph
-                    .get_edge_weight(edge_id)
-                    .expect("no weight for the edge")
-                    .view();
+                let weight = self.graph.get_edge_weight(edge_id)?.view();
                 // visit each node within the hyperedge
-                for v in self
-                    .graph
-                    .get_edge_domain(edge_id)
-                    .expect("empty hyperedge")
-                    .clone()
-                {
+                for v in self.graph.get_edge_domain(edge_id)?.clone() {
                     if v == u {
                         continue;
                     }

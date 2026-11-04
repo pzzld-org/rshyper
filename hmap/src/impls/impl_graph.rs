@@ -253,19 +253,24 @@ where
     {
         self.get_node_mut(index).map(|node| node.weight_mut())
     }
-    /// returns a set of [`Node`]s that are associated with the given edge id
+    /// returns the [`Node`]s of the members of the given edge.
+    ///
+    /// # Errors
+    ///
+    /// - [`EdgeNotFound`](Error::EdgeNotFound) if there is no such edge;
+    /// - [`NodeNotFound`](Error::NodeNotFound) if a member has no node entry, which only an
+    ///   escape hatch such as `get_domain_mut` or [`retain_nodes`](Self::retain_nodes) can
+    ///   cause. No member is skipped silently.
     pub fn load_edge_nodes<Q>(&self, index: &Q) -> Result<Vec<&Node<N, Ix>>>
     where
         Q: ?Sized + Eq + Hash,
         EdgeId<Ix>: Borrow<Q>,
     {
-        let surface = self.get_edge(index)?;
-        let nodes = surface
+        self.get_edge(index)?
             .domain()
             .iter()
-            .map(|v| self.get_node(v).expect("vertex not found"))
-            .collect::<Vec<_>>();
-        Ok(nodes)
+            .map(|v| self.get_node(v))
+            .collect()
     }
     /// merge two edges within the hypergraph into one by combining their vertices and using
     /// the [`Add`](core::ops::Add) trait to merge their weights;
@@ -385,12 +390,13 @@ where
     /// retain nodes in the hypergraph based on a predicate; the node history is pruned to
     /// match.
     ///
-    /// ## Saftey
+    /// ## Safety
     ///
-    /// This method is unsafe because it allows for the removal of nodes based on a predicate,
-    /// without removing the associated hyperedges. This can lead to inconsistencies in the
-    /// graph structure if not used carefully. It is the caller's responsibility to ensure that
-    /// the predicate does not leave the graph in an invalid state.
+    /// The body is safe Rust; `unsafe` only marks the contract. This removes nodes only:
+    /// incident edges are left dangling, still naming the removed vertices, and reads such as
+    /// [`load_edge_nodes`](Self::load_edge_nodes) then return
+    /// [`NodeNotFound`](Error::NodeNotFound). Which deletion policy the graph should enforce
+    /// is ADR-DELETE (#117).
     pub unsafe fn retain_nodes<F>(&mut self, f: F) -> &mut Self
     where
         F: FnMut(&VertexId<Ix>, &mut Node<N, Ix>) -> bool,

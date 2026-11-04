@@ -275,9 +275,7 @@ where
             let graph = self.graph;
             for edge_id in graph.find_edges_with_node(&current) {
                 // Get all vertices in this hyperedge
-                let vertices = graph
-                    .get_edge_domain(edge_id)
-                    .expect("Failed to get edge vertices");
+                let vertices = graph.get_edge_domain(edge_id)?;
 
                 // Process each vertex in this hyperedge
                 for &neighbor in vertices {

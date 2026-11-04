@@ -136,7 +136,7 @@ where
 
             // For each hyperedge, visit all vertices that haven't been visited yet
             for edge_id in self.graph.find_edges_with_node(&current) {
-                let vertices = self.graph.get_edge_domain(edge_id).expect("Edge is empty");
+                let vertices = self.graph.get_edge_domain(edge_id)?;
 
                 // Add vertices in reverse order to maintain expected DFS behavior
                 let mut new_vertices = vertices

@@ -115,8 +115,9 @@ where
     pub(crate) const fn attrs(&self) -> A {
         self.attrs
     }
-    /// returns the [`Mode`] of the hypergraph
-    pub fn mode(&self) -> Mode {
+    /// returns the [`Mode`] of the hypergraph, or `None` for a `Mode`-kinded graph such as
+    /// [`HyperMap::dynamic`], which stores no runtime mode
+    pub fn mode(&self) -> Option<Mode> {
         self.attrs().mode()
     }
     /// returns am immutable reference to the nodes

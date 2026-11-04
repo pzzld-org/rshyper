@@ -84,18 +84,13 @@ impl<I, K> Attrs<I, K> {
     {
         self.is_kind::<Undirected>()
     }
-    /// returns the _kind_ of the graph as an enum variant of [`Mode`]
-    pub fn mode(&self) -> Mode
+    /// returns the _kind_ of the graph as an enum variant of [`Mode`], or `None` when `K`
+    /// fixes no direction (a `Mode`-kinded graph stores no runtime mode)
+    pub fn mode(&self) -> Option<Mode>
     where
         K: GraphType,
     {
-        if self.is_directed() {
-            Mode::Directed
-        } else if self.is_undirected() {
-            Mode::Undirected
-        } else {
-            panic!("Unknown graph type")
-        }
+        Mode::from_type::<K>()
     }
 }
 

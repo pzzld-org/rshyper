@@ -114,7 +114,7 @@ where
 
             // visit all vertices within each edge that haven't been visited yet
             for edge_id in self.graph.find_edges_with_node(&current) {
-                for vertex in self.graph.get_edge_domain(edge_id).expect("Edge is empty") {
+                for vertex in self.graph.get_edge_domain(edge_id)? {
                     self.register(*vertex);
                 }
             }
