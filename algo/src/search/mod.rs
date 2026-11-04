@@ -7,7 +7,7 @@
 #[doc(inline)]
 pub use self::{
     astar::AStarSearch, breadth_first::BreadthFirstTraversal, depth_first::DepthFirstTraversal,
-    dijkstra::Dijkstra, traits::*,
+    dijkstra::Dijkstra, traits::*, walks::*,
 };
 
 mod impls {
@@ -21,6 +21,7 @@ pub mod astar;
 pub mod breadth_first;
 pub mod depth_first;
 pub mod dijkstra;
+pub mod walks;
 
 mod traits {
     #[doc(inline)]
@@ -38,4 +39,5 @@ pub mod prelude {
     pub use super::breadth_first::BreadthFirstTraversal;
     pub use super::depth_first::DepthFirstTraversal;
     pub use super::dijkstra::Dijkstra;
+    pub use super::walks::{PathLimits, Walk, Walks};
 }

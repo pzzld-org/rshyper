@@ -62,7 +62,8 @@ mod types {
 // re-exports
 #[cfg(feature = "alloc")]
 pub use self::search::{
-    AStarSearch, BreadthFirstTraversal, DepthFirstTraversal, Dijkstra, Heuristic, Search,
+    AStarSearch, BreadthFirstTraversal, DepthFirstTraversal, Dijkstra, Heuristic, PathLimits,
+    Search, Walk, Walks,
 };
 #[doc(inline)]
 pub use self::{error::*, traits::*, types::*};
