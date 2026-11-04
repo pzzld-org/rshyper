@@ -64,17 +64,20 @@ mod use_alloc {
 }
 
 #[cfg(all(feature = "alloc", feature = "nightly"))]
+#[clippy::msrv = "1.100"]
 mod use_alloc {
     use crate::idx::VertexId;
 
+    use alloc::alloc::Global;
     use alloc::collections::{BTreeSet, VecDeque};
     use alloc::vec::Vec;
 
+    // `A` defaults to `Global` so `VertexVec<Ix>` is the same type with or without `nightly`
     /// a type alias for a [`Vec`] of [`VertexId`] that is generic over the index type `I` and
     /// the allocator `A`
-    pub type VertexVec<I, A> = Vec<VertexId<I>, A>;
+    pub type VertexVec<I, A = Global> = Vec<VertexId<I>, A>;
     /// a type alias for a [`VertexId`] stored in a [`VecDeque`]
-    pub type VertexDeque<Ix, A> = VecDeque<VertexId<Ix>, A>;
+    pub type VertexDeque<Ix, A = Global> = VecDeque<VertexId<Ix>, A>;
     /// a type alias for a [`VertexId`] stored in a [`BTreeSet`]
-    pub type VertexBSet<Ix, A> = BTreeSet<VertexId<Ix>, A>;
+    pub type VertexBSet<Ix, A = Global> = BTreeSet<VertexId<Ix>, A>;
 }
