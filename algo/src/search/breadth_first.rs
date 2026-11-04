@@ -8,8 +8,8 @@ use crate::traits::Traversal;
 use alloc::collections::VecDeque;
 use core::hash::BuildHasher;
 use hashbrown::{DefaultHashBuilder, HashSet};
-use rshyper::idx::{HyperIndex, VertexId, VertexSet};
-use rshyper::{GraphProps, HyperGraph};
+use rshyper_core::idx::{HyperIndex, VertexId, VertexSet};
+use rshyper_core::{GraphProps, HyperGraph};
 
 /// Breadth-First Traversal algorithm for hypergraphs
 pub struct BreadthFirstTraversal<'a, N, E, A, H, S = DefaultHashBuilder>

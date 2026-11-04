@@ -3,7 +3,7 @@
     authors: @FL03
 */
 use crate::{HyperMap, iter};
-use core::hash::{BuildHasher, Hash};
+use core::hash::BuildHasher;
 use rshyper_core::edge::HashEdge;
 use rshyper_core::idx::{EdgeId, HyperIndex, VertexId};
 use rshyper_core::traits::{HyperGraph, HyperGraphIterEdge, HyperGraphIterNode, RawHyperGraph};
@@ -99,8 +99,6 @@ impl<N, E, A, S> HyperGraphIterNode<N, E, A> for HyperMap<N, E, A, S>
 where
     A: GraphProps,
     S: BuildHasher + Default,
-    E: Eq + Hash,
-    N: Eq + Hash,
     A::Ix: HyperIndex,
 {
     type Nodes<'a>
@@ -126,8 +124,6 @@ impl<N, E, A, S> HyperGraphIterEdge<N, E, A> for HyperMap<N, E, A, S>
 where
     A: GraphProps,
     S: BuildHasher + Default,
-    E: Eq + Hash,
-    N: Eq + Hash,
     A::Ix: HyperIndex,
 {
     type Surfaces<'a>

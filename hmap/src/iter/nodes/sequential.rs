@@ -4,176 +4,96 @@
 */
 //! this module implements sequential iterator for the [`HyperMap`](crate::HyperMap)
 //! which iterates over the nodes in the hypergraph in an ordered, sequential manner.
-use crate::iter;
+//!
+//! Each iterator walks the node history and looks every id up in the node map, so it yields
+//! exactly the live nodes recorded in the history, in creation order; history ids without a
+//! live node are skipped. Traversal costs `O(h)` expected lookups for a history of length `h`.
+//! Ordered _mutable_ iteration is not provided: it cannot be expressed over a hash map without
+//! aliasing or `unsafe`.
+use crate::types::NodeMap;
+use core::hash::BuildHasher;
 use core::slice;
+use hashbrown::DefaultHashBuilder;
 use rshyper_core::idx::{HashIndex, VertexId};
 use rshyper_core::node::Node;
 
 /// [`SeqNodeIter`] is an iterator producing references to the node entries w.r.t. the order
 /// in-which they were inserted.
-pub struct SeqNodeIter<'a, N, Ix>
+pub struct SeqNodeIter<'a, N, Ix, S = DefaultHashBuilder>
 where
     N: 'a,
 {
     pub(crate) keys: slice::Iter<'a, VertexId<Ix>>,
-    pub(crate) iter: iter::NodeIter<'a, N, Ix>,
-}
-/// [`SeqNodeIterMut`] is a mutable iterator producing mutable references to the node entries
-/// w.r.t. the order in-which they were inserted.
-pub struct SeqNodeIterMut<'a, N, Ix>
-where
-    N: 'a,
-{
-    pub(crate) keys: slice::Iter<'a, VertexId<Ix>>,
-    pub(crate) iter: iter::NodeIterMut<'a, N, Ix>,
+    pub(crate) nodes: &'a NodeMap<N, Ix, S>,
 }
 /// [`SeqNodeKeys`] is a sequential iterator over the _keys_ of the nodes within the [`HyperMap`](crate::HyperMap)
 /// yielding the [`VertexId`] of each node w.r.t. the order in-which they were inserted.
-pub struct SeqNodeKeys<'a, Ix> {
+pub struct SeqNodeKeys<'a, N, Ix, S = DefaultHashBuilder> {
     pub(crate) keys: slice::Iter<'a, VertexId<Ix>>,
+    pub(crate) nodes: &'a NodeMap<N, Ix, S>,
 }
 /// [`SeqNodeValues`] is an iterator producing references to the nodes of a hypergraph w.r.t.
 /// the order in-which they were inserted.
-pub struct SeqNodeValues<'a, N, Ix>
+pub struct SeqNodeValues<'a, N, Ix, S = DefaultHashBuilder>
 where
     N: 'a,
 {
     pub(crate) keys: slice::Iter<'a, VertexId<Ix>>,
-    pub(crate) values: iter::NodeValues<'a, N, Ix>,
-}
-/// [`SeqNodeValuesMut`] is a mutable iterator producing mutable references to the nodes of the
-/// graph in a manner that respects the order in-which they were inserted.
-pub struct SeqNodeValuesMut<'a, N, Ix>
-where
-    N: 'a,
-{
-    pub(crate) keys: slice::Iter<'a, VertexId<Ix>>,
-    pub(crate) values: iter::NodeValuesMut<'a, N, Ix>,
+    pub(crate) nodes: &'a NodeMap<N, Ix, S>,
 }
 
 /*
  ************* Implementations *************
 */
-impl<'a, N, Ix> Iterator for SeqNodeIter<'a, N, Ix>
+impl<'a, N, Ix, S> Iterator for SeqNodeIter<'a, N, Ix, S>
 where
     N: 'a,
     Ix: HashIndex,
+    S: BuildHasher,
 {
     type Item = (&'a VertexId<Ix>, &'a Node<N, Ix>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let next = self.keys.next()?;
-        // Find the node with the matching id in the nodes iterator
-        self.iter.find(|(id, _)| id == next)
+        let nodes = self.nodes;
+        self.keys.find_map(|id| nodes.get_key_value(id))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.keys.len()))
     }
 }
 
-impl<'a, N, Ix> Iterator for SeqNodeIterMut<'a, N, Ix>
+impl<'a, N, Ix, S> Iterator for SeqNodeKeys<'a, N, Ix, S>
+where
+    Ix: HashIndex,
+    S: BuildHasher,
+{
+    type Item = &'a VertexId<Ix>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let nodes = self.nodes;
+        self.keys.find(|id| nodes.contains_key(*id))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.keys.len()))
+    }
+}
+
+impl<'a, N, Ix, S> Iterator for SeqNodeValues<'a, N, Ix, S>
 where
     N: 'a,
     Ix: HashIndex,
+    S: BuildHasher,
 {
-    type Item = (&'a VertexId<Ix>, &'a mut Node<N, Ix>);
+    type Item = &'a Node<N, Ix>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let next = self.keys.next()?;
-        // Find the node with the matching id in the nodes iterator
-        self.iter.find(|(id, _)| id == next)
-    }
-}
-
-impl<'a, Idx> Iterator for SeqNodeKeys<'a, Idx>
-where
-    Idx: HashIndex,
-{
-    type Item = &'a VertexId<Idx>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.keys.next()
-    }
-}
-
-impl<'a, N, Idx> Iterator for SeqNodeValues<'a, N, Idx>
-where
-    N: 'a,
-    Idx: HashIndex,
-{
-    type Item = &'a Node<N, Idx>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(next) = self.keys.next() {
-            // Find the node with the matching id in the nodes iterator
-            let node = self.values.find(|node| node.id() == next)?;
-            // Return the found node
-            return Some(node);
-        }
-        None
-    }
-}
-
-impl<'a, N, Idx> Iterator for SeqNodeValuesMut<'a, N, Idx>
-where
-    N: 'a,
-    Idx: HashIndex,
-{
-    type Item = &'a mut Node<N, Idx>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(next) = self.keys.next() {
-            // Find the node with the matching id in the nodes iterator
-            let node = self.values.find(|node| node.id() == next)?;
-            // Return the found node
-            return Some(node);
-        }
-        None
-    }
-}
-
-#[allow(dead_code)]
-mod _impls {
-    use super::*;
-    use crate::iter;
-
-    impl<'a, Idx> SeqNodeKeys<'a, Idx>
-    where
-        Idx: HashIndex,
-    {
-        /// Creates a new sequential node keys iterator from the given slice of vertex ids.
-        pub(crate) fn new(keys: &'a [VertexId<Idx>]) -> Self {
-            Self { keys: keys.iter() }
-        }
+        let nodes = self.nodes;
+        self.keys.find_map(|id| nodes.get(id))
     }
 
-    impl<'a, N, Idx> SeqNodeValues<'a, N, Idx>
-    where
-        N: 'a,
-        Idx: HashIndex,
-    {
-        /// Creates a new sequential node values iterator from the given slice of vertex ids and the
-        /// node values.
-        pub(crate) fn new(keys: &'a [VertexId<Idx>], values: iter::NodeValues<'a, N, Idx>) -> Self {
-            Self {
-                keys: keys.iter(),
-                values,
-            }
-        }
-    }
-
-    impl<'a, N, Idx> SeqNodeValuesMut<'a, N, Idx>
-    where
-        N: 'a,
-        Idx: HashIndex,
-    {
-        /// Creates a new sequential node values mutable iterator from the given slice of vertex ids
-        /// and the node values.
-        pub(crate) fn new(
-            keys: &'a [VertexId<Idx>],
-            values: iter::NodeValuesMut<'a, N, Idx>,
-        ) -> Self {
-            Self {
-                keys: keys.iter(),
-                values,
-            }
-        }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.keys.len()))
     }
 }

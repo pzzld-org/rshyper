@@ -10,7 +10,7 @@ pub use self::prelude::*;
 mod directional;
 mod iter;
 #[cfg(feature = "rayon")]
-pub(self) mod parallel;
+mod parallel;
 mod sequential;
 
 pub(crate) mod prelude {

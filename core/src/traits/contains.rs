@@ -18,7 +18,7 @@ pub trait Contains<Q> {
 */
 use crate::idx::{RawIndex, VertexId};
 use crate::{Domain, GraphType};
-use crate::{Edge, Link};
+use crate::{HyperEdge, Link};
 
 impl<S, K, Idx, Q> Contains<Q> for Link<S, K, Idx>
 where
@@ -38,7 +38,7 @@ where
     }
 }
 
-impl<T, S, K, Idx, Q> Contains<Q> for Edge<T, S, K, Idx>
+impl<T, S, K, Idx, Q> Contains<Q> for HyperEdge<T, S, K, Idx>
 where
     Q: PartialEq,
     S: Domain<Idx>,

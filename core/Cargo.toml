@@ -16,7 +16,7 @@ version.workspace = true
 
 [package.metadata.docs.rs]
 all-features = false
-features = ["full"]
+features = ["default"]
 rustc-args = ["--cfg", "docsrs"]
 version = "v{{version}}"
 
@@ -28,17 +28,11 @@ tag-name = "{{version}}"
 bench = false
 crate-type = ["lib"]
 doc = true
-doctest = false
 test = true
-
-[[test]]
-name = "index"
-required-features = ["std"]
 
 [dependencies]
 # custom
 contained = { workspace = true }
-variants = { workspace = true }
 # concurrency & parallelism
 rayon = { optional = true, workspace = true }
 # data structures
@@ -66,9 +60,7 @@ tracing = { features = ["attributes"], optional = true, workspace = true }
 wasm-bindgen = { optional = true, workspace = true }
 
 [features]
-default = [
-  "std",
-]
+default = ["macros", "std"]
 
 full = [
   "default",
@@ -78,23 +70,32 @@ full = [
   "tracing",
 ]
 
-# ************* [FF:Environments] *************
-nightly = []
+# ********* [FF] Features *********
+
+macros = []
+
+# ********* [FF] Environments *********
+
+nightly = [
+  "contained/nightly",
+  "hashbrown?/nightly",
+]
 
 std = [
   "alloc",
   "anyhow/std",
   "contained/std",
+  "getrandom?/std",
   "hashbrown?/default",
   "num-traits/std",
   "rand?/std",
   "rand?/std_rng",
   "rand?/thread_rng",
+  "rand_distr?/std",
   "serde?/std",
   "strum/std",
   "tracing?/std",
   "thiserror/std",
-  "variants/std",
 ]
 
 wasi = [
@@ -103,15 +104,15 @@ wasi = [
 
 wasm = [
   "alloc",
-  "rayon?/web_spin_lock",
   "wasm_bindgen",
+  "getrandom?/wasm_js",
+  "rayon?/web_spin_lock",
 ]
 
 # ********* [FF] Dependencies *********
 
 alloc = [
   "hashbrown?/alloc",
-  "variants/alloc",
   "serde?/alloc",
   "serde_json?/alloc",
 ]

@@ -2,70 +2,57 @@
     appellation: edges <module>
     authors: @FL03
 */
-//! this module focuses on the [`Edge`] implementation, providing additional types, traits, and
+//! this module focuses on the [`HyperEdge`] implementation, providing additional types, traits, and
 //! representations for edges in a hypergraph.
 #[doc(inline)]
-pub use self::{hyper_edge::Edge, traits::*, types::*, utils::*};
+pub use self::{hyper_edge::HyperEdge, link::Link, traits::*, types::*, utils::*};
 
-/// the [`hyper_edge`] is responsible for defining the [`Edge`] struct
+/// the [`hyper_edge`] is responsible for defining the [`HyperEdge`] struct
 pub mod hyper_edge;
+pub mod link;
 
 mod impls {
-    pub mod impl_edge;
+    mod impl_hyper_edge;
+
+    mod impl_link;
+    mod impl_link_ext;
+    mod impl_link_repr;
+
+    #[doc(hidden)]
+    mod impl_link_deprecated;
 }
 
 mod traits {
-    //! this module contains the traits that define the interface for edges and facets in a
-    //! hypergraph
-    //!
     #[doc(inline)]
-    #[allow(unused_imports)]
-    pub use self::prelude::*;
-    /// this module defines the [`RawSurface`] trait
-    mod surface;
+    pub use self::{layout::*, surface::*};
 
-    pub(crate) mod prelude {
-        #[doc(inline)]
-        pub use super::surface::*;
-    }
+    mod layout;
+    mod surface;
 }
 
 mod types {
-    //! this module contains various type aliases and additional types in support of the edges
-    //! of a hypergraph.
     #[doc(inline)]
-    #[allow(unused_imports)]
-    pub use self::prelude::*;
+    pub use self::aliases::*;
 
     mod aliases;
-
-    pub(crate) mod prelude {
-        #[doc(inline)]
-        pub use super::aliases::*;
-    }
 }
 
 mod utils {
     //! this module implements various utility functions for working with edges in a hypergraph
     #[doc(inline)]
-    #[allow(unused_imports)]
-    pub use self::prelude::*;
+    pub use self::base::*;
+    #[doc(inline)]
+    #[cfg(all(feature = "alloc", feature = "rand"))]
+    pub use self::rand::*;
 
     mod base;
     #[cfg(all(feature = "alloc", feature = "rand"))]
-    pub(self) mod rand;
-
-    pub(crate) mod prelude {
-        #[doc(inline)]
-        pub use super::base::*;
-        #[doc(inline)]
-        #[cfg(all(feature = "alloc", feature = "rand"))]
-        pub use super::rand::*;
-    }
+    mod rand;
 }
 
 pub(crate) mod prelude {
     pub use super::hyper_edge::*;
+    pub use super::link::*;
     pub use super::traits::*;
     pub use super::types::*;
     pub use super::utils::*;

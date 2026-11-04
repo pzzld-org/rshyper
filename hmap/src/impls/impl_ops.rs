@@ -46,6 +46,10 @@ where
 {
     type Output = HashEdge<E, A::Kind, Ix, S>;
 
+    /// # Panics
+    ///
+    /// Panics if the graph has no edge with this id, as indexing does in `std`; use
+    /// [`get_edge`](HyperMap::get_edge) to get an error instead.
     fn index(&self, index: &EdgeId<Ix>) -> &Self::Output {
         self.get_edge(index).expect("Edge not found")
     }
@@ -57,6 +61,10 @@ where
     S: BuildHasher,
     Ix: HashIndex,
 {
+    /// # Panics
+    ///
+    /// Panics if the graph has no edge with this id, as indexing does in `std`; use
+    /// [`get_edge_mut`](HyperMap::get_edge_mut) to get an error instead.
     fn index_mut(&mut self, index: &EdgeId<Ix>) -> &mut Self::Output {
         self.get_edge_mut(index).expect("Edge not found")
     }
@@ -70,6 +78,10 @@ where
 {
     type Output = Node<N, Ix>;
 
+    /// # Panics
+    ///
+    /// Panics if the graph has no node with this id, as indexing does in `std`; use
+    /// [`get_node`](HyperMap::get_node) to get an error instead.
     fn index(&self, index: &VertexId<Ix>) -> &Self::Output {
         self.get_node(index).expect("Node not found")
     }
@@ -81,6 +93,10 @@ where
     S: BuildHasher,
     Ix: HashIndex,
 {
+    /// # Panics
+    ///
+    /// Panics if the graph has no node with this id, as indexing does in `std`; use
+    /// [`get_node_mut`](HyperMap::get_node_mut) to get an error instead.
     fn index_mut(&mut self, index: &VertexId<Ix>) -> &mut Self::Output {
         self.get_node_mut(index).expect("Node not found")
     }

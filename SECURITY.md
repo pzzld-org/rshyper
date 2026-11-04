@@ -13,5 +13,5 @@ Checkout the current and supported packages below:
 ## Reporting a Vulnerability
 
 - Email our [support team](mailto:support@scsys.io)
-- Open an issue in our [GitHub repository](https://github.com/FL03/rshyper/issues)
+- Open an issue in our [GitHub repository](https://github.com/pzzld-org/rshyper/issues)
 - Visit our [website](https://scsys.io) for more information

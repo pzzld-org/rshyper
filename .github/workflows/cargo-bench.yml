@@ -10,11 +10,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
 on:
-  pull_request:
+  push:
     branches: [main, master]
-    types: [closed]
-  release:
-    types: [published]
+    tags: [latest, v*.*.*, "*-nightly"]
   repository_dispatch:
     types: [cargo-bench]
   workflow_dispatch:

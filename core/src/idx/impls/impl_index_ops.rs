@@ -2,9 +2,30 @@
     appellation: impl_index <module>
     authors: @FL03
 */
-use crate::idx::IndexBase;
+use crate::idx::{IndexBase, IndexType, RawIndex};
+use crate::traits::StepWith;
 use core::cmp::Ordering;
 use num_traits::{Num, One, Zero};
+
+impl<T, K> StepWith<T> for IndexBase<T, K>
+where
+    K: IndexType,
+    T: RawIndex,
+{
+    type Output = IndexBase<T, K>;
+
+    fn step_with<F>(&mut self, f: F) -> Self::Output
+    where
+        F: FnOnce(&T) -> T,
+    {
+        // compute the next value using the provided function
+        let next = f(self.get());
+        // replace the current value with the next one
+        let prev = self.replace(next);
+        // return the previous instance
+        Self::new(prev)
+    }
+}
 
 impl<T, K> Eq for IndexBase<T, K> where T: Eq {}
 

@@ -20,7 +20,6 @@ pub trait GraphType: 'static + Send + Sync + core::fmt::Debug + core::fmt::Displ
     PartialEq,
     Ord,
     PartialOrd,
-    variants::VariantConstructors,
     strum::AsRefStr,
     strum::Display,
     strum::EnumCount,
@@ -33,24 +32,37 @@ pub trait GraphType: 'static + Send + Sync + core::fmt::Debug + core::fmt::Displ
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize),
-    serde(rename_all = "snake_case")
+    serde(rename_all = "lowercase")
 )]
+#[strum(serialize_all = "lowercase")]
 pub enum Mode {
+    #[cfg_attr(feature = "serde", serde(alias = "d", alias = "dir"))]
     Directed = 0,
     #[default]
+    #[cfg_attr(feature = "serde", serde(alias = "u", alias = "un", alias = "undir"))]
     Undirected = 1,
 }
 
 impl Mode {
-    /// returns the [`Mode`] corresponding to the given [`GraphType`].
-    pub fn from_type<T: GraphType>() -> Self {
+    /// a functional constructor for the [`Directed`](Mode::Directed) mode.
+    pub const fn directed() -> Self {
+        Mode::Directed
+    }
+    /// a functional constructor for the [`Undirected`](Mode::Undirected) mode.
+    pub const fn undirected() -> Self {
+        Mode::Undirected
+    }
+    /// returns the [`Mode`] corresponding to the given [`GraphType`], or `None` for a kind
+    /// that fixes no direction at the type level, such as [`Mode`] itself: a `Mode`-kinded
+    /// graph stores no runtime mode.
+    pub fn from_type<T: GraphType>() -> Option<Self> {
         use core::any::TypeId;
         if TypeId::of::<T>() == TypeId::of::<Directed>() {
-            Mode::Directed
+            Some(Mode::Directed)
         } else if TypeId::of::<T>() == TypeId::of::<Undirected>() {
-            Mode::Undirected
+            Some(Mode::Undirected)
         } else {
-            panic!("Unknown graph type");
+            None
         }
     }
     /// returns the [`GraphType`] corresponding to this mode.
@@ -58,6 +70,21 @@ impl Mode {
         match self {
             Mode::Directed => &Directed,
             Mode::Undirected => &Undirected,
+        }
+    }
+    /// returns true if the current variant matches the given graph type.
+    pub fn is<T: 'static>(&self) -> bool {
+        use core::any::TypeId;
+        match self {
+            Mode::Directed => TypeId::of::<T>() == TypeId::of::<Directed>(),
+            Mode::Undirected => TypeId::of::<T>() == TypeId::of::<Undirected>(),
+        }
+    }
+    /// returns a boxed instance of the corresponding [`GraphType`].
+    pub fn boxed(self) -> Box<dyn GraphType> {
+        match self {
+            Mode::Directed => Box::new(Directed),
+            Mode::Undirected => Box::new(Undirected),
         }
     }
 }

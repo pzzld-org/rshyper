@@ -5,9 +5,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
 on:
-  pull_request:
-    branches: [main, master]
-    types: [closed, opened, reopened]
   push:
     branches: [main, master]
     tags: [latest, v*.*.*, "*-nightly"]

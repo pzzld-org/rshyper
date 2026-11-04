@@ -4,15 +4,15 @@
 //! ## Components
 //!
 //! - [`attrs`]: Contains the [`Attrs`] and [`GraphProps`] types for managing graph attributes.
-//! - [`edge`]: implements the [`Edge`] and [`Surface`] types for representing hyperedges
+//! - [`edge`]: implements the [`HyperEdge`] and [`Link`] types for representing hyperedges
 //! - [`node`]: provides the [`Node`] implementation for representing hypernodes
 //! - [`weight`]: gives the [`Weight`] type for representing weights in a hypergraph
 //!
 #![crate_name = "rshyper_core"]
 #![crate_type = "lib"]
 #![doc(
-    html_logo_url = "https://raw.githubusercontent.com/FL03/rshyper/main/.artifacts/assets/logo.svg",
-    html_favicon_url = "https://raw.githubusercontent.com/FL03/rshyper/main/.artifacts/assets/logo.svg"
+    html_logo_url = "https://raw.githubusercontent.com/pzzld-org/rshyper/main/.artifacts/assets/logo.svg",
+    html_favicon_url = "https://raw.githubusercontent.com/pzzld-org/rshyper/main/.artifacts/assets/logo.svg"
 )]
 #![allow(
     clippy::missing_errors_doc,
@@ -24,7 +24,7 @@
     clippy::should_implement_trait
 )]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(feature = "nightly", feature(allocator_api))]
+#![cfg_attr(feature = "nightly", feature(allocator_ext))]
 // compile check
 #[cfg(not(any(feature = "alloc", feature = "std")))]
 compile_error! { "either the `alloc` or `std` feature must be enabled for the rshyper crate" }
@@ -35,6 +35,10 @@ extern crate alloc;
 #[macro_use]
 mod macros {
     #[macro_use]
+    pub(crate) mod index;
+    #[macro_use]
+    pub(crate) mod hypergraph;
+    #[macro_use]
     pub(crate) mod seal;
 }
 // modules
@@ -43,7 +47,6 @@ pub mod edge;
 pub mod error;
 pub mod idx;
 pub mod node;
-pub mod rel;
 pub mod weight;
 
 pub mod traits {
@@ -84,11 +87,10 @@ pub mod types {
 #[doc(inline)]
 pub use self::{
     attrs::{Attrs, GraphProps},
-    edge::Edge,
+    edge::{HyperEdge, Link, RawEdge},
     error::{Error, Result},
     idx::prelude::*,
     node::Node,
-    rel::{Link, RawLayout},
     traits::*,
     types::*,
     weight::{IntoWeight, Weight, Weightless},
@@ -96,13 +98,13 @@ pub use self::{
 // prelude
 #[doc(hidden)]
 pub mod prelude {
-    // pub use crate::error::*;
+    #[cfg(feature = "macros")]
+    pub use crate::{hyperedge, hypergraph, hypernode};
 
     pub use crate::attrs::prelude::*;
     pub use crate::edge::prelude::*;
     pub use crate::idx::prelude::*;
     pub use crate::node::prelude::*;
-    pub use crate::rel::prelude::*;
     pub use crate::traits::*;
     pub use crate::types::*;
     pub use crate::weight::*;

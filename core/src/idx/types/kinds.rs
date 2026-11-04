@@ -15,7 +15,7 @@ use crate::idx::{IndexBase, RawIndex};
 
 /// This trait is used to define various _kinds_ of indices that are used to compose graphical
 /// structures.
-pub trait GraphIndex
+pub trait IndexType
 where
     Self: Clone
         + Copy
@@ -59,7 +59,6 @@ where
         Hash,
         Ord,
         PartialOrd,
-        variants::VariantConstructors,
         strum::AsRefStr,
         strum::Display,
         strum::EnumCount,
@@ -94,64 +93,61 @@ where
 }
 
 macro_rules! impl_type_kind {
-    (@impl $(#[doc $($doc:tt)*])? $vis:vis $i:ident $kind:ident) => {
-        // create the implementation for the kind
-        impl_type_kind!(@branch $(#[doc $($doc)*])? $vis $i $kind);
-        // implement the necessary traits for the kind
-        impl_type_kind!(@kind $kind);
-        // stringify the kind and implement Display
-        impl ::core::fmt::Display for $kind {
-            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                // stringify the ident of the kind
-                let tag = stringify!($kind);
-                // write the tag in lowercase
-                write!(f, "{}", tag.to_lowercase())
-            }
-        }
-    };
-    (@branch $(#[doc $($doc:tt)*])? $vis:vis enum $kind:ident) => {
-        $(#[doc $($doc)*])?
-        #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
-        #[cfg_attr(
-            feature = "serde",
-            derive(serde_derive::Deserialize, serde_derive::Serialize),
-        )]
-        #[repr(transparent)]
+    (@def $(#[$meta:meta])* $vis:vis enum $kind:ident) => {
+        $(#[$meta])*
         $vis enum $kind {};
     };
-    (@branch $(#[doc $($doc:tt)*])? $vis:vis struct $kind:ident) => {
-        $(#[doc $($doc)*])?
-        #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq, Ord, PartialOrd)]
-        #[cfg_attr(
-            feature = "serde",
-            derive(serde_derive::Deserialize, serde_derive::Serialize),
-        )]
-        #[repr(transparent)]
+    (@def $(#[$meta:meta])* $vis:vis struct $kind:ident) => {
+        $(#[$meta])*
+        #[derive(Default)]
         $vis struct $kind;
     };
-    (@kind $kind:ident) => {
+    (@impl $(#[$meta:meta])* $vis:vis $i:ident $kind:ident($name:ident)) => {
+        // create the implementation for the kind
+        impl_type_kind! { @def $(#[$meta])*
+            #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
+            #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+            #[repr(transparent)]
+            $vis $i $kind
+        }
+
+        impl $kind {
+            /// get the name of the kind as a string slice
+            pub fn name(&self) -> &str {
+                stringify!($name)
+            }
+        }
+        // implement the necessary traits for the kind
         unsafe impl ::core::marker::Send for $kind {}
 
         unsafe impl ::core::marker::Sync for $kind {}
 
-        impl GraphIndex for $kind {
-            seal!();
+        impl IndexType for $kind { seal! {} }
+
+        impl AsRef<str> for $kind {
+            fn as_ref(&self) -> &str {
+                self.name()
+            }
+        }
+        // stringify the kind and implement Display
+        impl ::core::fmt::Display for $kind {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                write!(f, "{}", self.name())
+            }
         }
     };
-    ($($(#[doc $($doc:tt)*])? $vis:vis $i:ident $kind:ident);* $(;)?) => {
-        $(
-            impl_type_kind!(@impl $(#[doc $($doc)*])? $vis $i $kind);
-        )*
+    ($($(#[$meta:meta])* $vis:vis $i:ident $kind:ident($name:ident));* $(;)?) => {
+        $(impl_type_kind! { @impl $(#[$meta])* $vis $i $kind($name) })*
     };
 }
 
 impl_type_kind! {
     #[doc = "A kind of index for edges in a graph"]
-    pub struct EdgeIndex;
+    pub struct EdgeIndex(edge);
     #[doc = "A kind of index for vertices in a graph"]
-    pub struct VertexIndex;
+    pub struct VertexIndex(vertex);
 }
 
-impl_type_kind! {
-    @kind IndexKind
+impl IndexType for IndexKind {
+    seal! {}
 }

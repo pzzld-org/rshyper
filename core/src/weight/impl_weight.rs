@@ -11,33 +11,25 @@ impl<T> Weight<T> {
         Self(value)
     }
     /// generates a new instance of the [`Weight`] using the provided function
-    pub fn new_with<F>(value: F) -> Self
+    pub fn init<F>(value: F) -> Self
     where
         F: FnOnce() -> T,
     {
         Self::new(value())
-    }
-    #[allow(clippy::should_implement_trait)]
-    /// returns a new instance of the [`Weight`] with the default value of the inner type.
-    pub fn default() -> Self
-    where
-        T: Default,
-    {
-        Self::new_with(Default::default)
     }
     /// returns a new instance of the [`Weight`] with the inner value set to `1`
     pub fn one() -> Self
     where
         T: num_traits::One,
     {
-        Self::new_with(T::one)
+        Self::init(T::one)
     }
     /// returns a new instance of the [`Weight`] with a value of `0`
     pub fn zero() -> Self
     where
         T: num_traits::Zero,
     {
-        Self::new_with(T::zero)
+        Self::init(T::zero)
     }
     /// returns an immutable reference to the inner value.
     pub const fn get(&self) -> &T {
@@ -47,9 +39,9 @@ impl<T> Weight<T> {
     pub const fn get_mut(&mut self) -> &mut T {
         &mut self.0
     }
-    /// consumes the current instance to return the inner value
     #[inline]
-    pub fn into_inner(self) -> T {
+    /// consumes the current instance to return the inner value
+    pub fn value(self) -> T {
         self.0
     }
     /// applies the provided function onto the inner value and returns a new [`Weight`] with
@@ -59,7 +51,7 @@ impl<T> Weight<T> {
     where
         F: FnOnce(T) -> U,
     {
-        Weight::new(f(self.into_inner()))
+        Weight::new(f(self.value()))
     }
     /// apply the function onto a mutable reference to the inner value and return a
     /// mutable reference to the current instanc storing the updating weight.

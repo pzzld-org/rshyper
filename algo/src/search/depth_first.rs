@@ -4,8 +4,8 @@
 */
 //! this module implements a Depth-First Traversal algorithm for hypergraphs
 use hashbrown::DefaultHashBuilder;
-use rshyper::idx::{VertexId, VertexSet};
-use rshyper::{GraphProps, HyperGraph};
+use rshyper_core::idx::{VertexId, VertexSet};
+use rshyper_core::{GraphProps, HyperGraph};
 
 /// Depth-First Traversal algorithm for hypergraphs
 pub struct DepthFirstTraversal<'a, N, E, A, H, S = DefaultHashBuilder>

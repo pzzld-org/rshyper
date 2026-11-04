@@ -2,13 +2,16 @@
     appellation: impl_repr <module>
     authors: @FL03
 */
-use crate::idx::{EdgeIndex, IndexBase, RawIndex, VertexIndex};
+use crate::idx::{EdgeIndex, IndexBase, IndexType, RawIndex, VertexIndex};
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 /// a global static counter used to generate unique indices
 pub(crate) static INDEX_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
-impl<K> IndexBase<usize, K> {
+impl<K> IndexBase<usize, K>
+where
+    K: IndexType,
+{
     /// returns a new index generated using an [`AtomicUsize`]
     /// This method is useful in that it is `no_std` compatible, thread-safe, and capable of
     /// generating unique indices in a concurrent environment.
@@ -43,7 +46,7 @@ impl<K> IndexBase<usize, K> {
     /// the [`IndexBase`] is not generalized, automatically using random number generation
     /// if the `rand` feature is enabled, or an atomic counter otherwise. The method is also
     /// useful in that it generates [`usize`] indices, whcih are the most common instances, yet
-    /// aren't direct implementors of [`StandardUniform`](rand_distr::StandardUniform).
+    /// aren't direct implementors of [`StandardUniform`](https://docs.rs/rand/latest/rand/distr/struct.StandardUniform.html).
     pub fn generate(&mut self) -> Self {
         // declare the prev param
         let prev: usize;
@@ -69,7 +72,8 @@ impl<T> IndexBase<T, EdgeIndex>
 where
     T: RawIndex,
 {
-    pub fn vertex(value: T) -> Self {
+    /// initializes a new index for an edge
+    pub const fn edge(value: T) -> Self {
         Self::new(value)
     }
 }
@@ -78,7 +82,8 @@ impl<T> IndexBase<T, VertexIndex>
 where
     T: RawIndex,
 {
-    pub fn vertex(value: T) -> Self {
+    /// initializes a new index for a vertex
+    pub const fn vertex(value: T) -> Self {
         Self::new(value)
     }
 }

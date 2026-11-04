@@ -2,12 +2,12 @@
     Appellation: edge <module>
     Contrib: @FL03
 */
-use super::RawSurface;
+use crate::edge::Link;
+use crate::edge::traits::{RawEdge, RawSurface};
 use crate::idx::{EdgeId, RawIndex, Udx, VertexId};
-use crate::rel::{Link, RawLayout};
 use crate::{Domain, GraphType, RawDomain, Weight};
 
-/// The [`Edge`] implementation essentially wraps the [`Link`] type with a [`Weight`]
+/// The [`HyperEdge`] implementation essentially wraps the [`Link`] type with a [`Weight`]
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(
     feature = "serde",
@@ -15,7 +15,7 @@ use crate::{Domain, GraphType, RawDomain, Weight};
     serde(rename_all = "snake_case")
 )]
 #[repr(C)]
-pub struct Edge<T, S, K, Idx = Udx>
+pub struct HyperEdge<T, S, K, Idx = Udx>
 where
     S: RawDomain<Key = VertexId<Idx>>,
 {
@@ -23,17 +23,17 @@ where
     pub(crate) weight: Weight<T>,
 }
 
-impl<T, S, K, Idx> Edge<T, S, K, Idx>
+impl<T, S, K, Idx> HyperEdge<T, S, K, Idx>
 where
     Idx: RawIndex,
     K: GraphType,
     S: Domain<Idx>,
 {
-    /// creates a new instance from the given edge and weight
+    /// creates a new instance from the given layout and weight
     pub const fn new(edge: Link<S, K, Idx>, weight: Weight<T>) -> Self {
         Self { link: edge, weight }
     }
-    /// create a new instance of the [`Edge`] from the given id, nodes, and weight
+    /// create a new instance of the [`HyperEdge`] from the given id, nodes, and weight
     pub fn from_parts(id: EdgeId<Idx>, nodes: S, weight: Weight<T>) -> Self {
         let edge = Link::new(id, nodes);
         Self::new(edge, weight)
@@ -125,21 +125,21 @@ where
     }
     /// consumes the current instance to create another with the given id.
     pub fn with_id(self, id: EdgeId<Idx>) -> Self {
-        Edge {
+        HyperEdge {
             link: self.link.with_id(id),
             weight: self.weight,
         }
     }
     /// consumes the current instance to create another with the given nodes.
-    pub fn with_domain<S2: Domain<Idx>>(self, nodes: S2) -> Edge<T, S2, K, Idx> {
-        Edge {
+    pub fn with_domain<S2: Domain<Idx>>(self, nodes: S2) -> HyperEdge<T, S2, K, Idx> {
+        HyperEdge {
             link: self.link.with_domain(nodes),
             weight: self.weight,
         }
     }
     /// consumes the current instance to create another with the given weight.
-    pub fn with_weight<U>(self, weight: Weight<U>) -> Edge<U, S, K, Idx> {
-        Edge {
+    pub fn with_weight<U>(self, weight: Weight<U>) -> HyperEdge<U, S, K, Idx> {
+        HyperEdge {
             link: self.link,
             weight,
         }
@@ -166,7 +166,7 @@ where
 
 #[allow(deprecated)]
 #[doc(hidden)]
-impl<T, S, K, Idx> Edge<T, S, K, Idx>
+impl<T, S, K, Idx> HyperEdge<T, S, K, Idx>
 where
     Idx: RawIndex,
     K: GraphType,
@@ -188,7 +188,7 @@ where
     }
 }
 
-impl<T, S, Idx, K> RawLayout for Edge<T, S, K, Idx>
+impl<T, S, Idx, K> RawEdge for HyperEdge<T, S, K, Idx>
 where
     Idx: RawIndex,
     K: GraphType,
@@ -213,7 +213,7 @@ where
     }
 }
 
-impl<T, S, Idx, K> RawSurface<T> for Edge<T, S, K, Idx>
+impl<T, S, Idx, K> RawSurface<T> for HyperEdge<T, S, K, Idx>
 where
     Idx: RawIndex,
     K: GraphType,

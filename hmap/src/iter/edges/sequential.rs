@@ -3,8 +3,13 @@
     authors: @FL03
 */
 //! this module implements sequential iterator over the edges of a [`HyperMap`](crate::HyperMap)
-use crate::iter;
-
+//!
+//! Each iterator walks the edge history and looks every id up in the edge map, so it yields
+//! exactly the live edges recorded in the history, in creation order; history ids without a
+//! live edge are skipped. Traversal costs `O(h)` expected lookups for a history of length `h`.
+//! Ordered _mutable_ iteration is not provided: it cannot be expressed over a hash map without
+//! aliasing or `unsafe`.
+use crate::types::EdgeMap;
 use core::hash::BuildHasher;
 use core::slice;
 use rshyper_core::GraphType;
@@ -21,11 +26,12 @@ where
     Ix: RawIndex,
 {
     pub(crate) keys: slice::Iter<'a, EdgeId<Ix>>,
-    pub(crate) iter: iter::EdgeIter<'a, E, K, Ix, S>,
+    pub(crate) edges: &'a EdgeMap<E, K, Ix, S>,
 }
-/// [`SeqEdgeIterMut`] is a mutable iterator producing mutable references to the edge entries
+/// [`SeqEdgeKeys`] is a sequential iterator over the _keys_ of the edges within the
+/// [`HyperMap`](crate::HyperMap) yielding the [`EdgeId`] of each edge
 /// w.r.t. the order in-which they were inserted.
-pub struct SeqEdgeIterMut<'a, E, K, Ix, S>
+pub struct SeqEdgeKeys<'a, E, K, Ix, S>
 where
     S: BuildHasher + 'a,
     E: 'a,
@@ -33,16 +39,7 @@ where
     Ix: RawIndex,
 {
     pub(crate) keys: slice::Iter<'a, EdgeId<Ix>>,
-    pub(crate) iter: iter::EdgeIterMut<'a, E, K, Ix, S>,
-}
-/// [`SeqEdgeKeys`] is a sequential iterator over the _keys_ of the edges within the
-/// [`HyperMap`](crate::HyperMap) yielding the [`EdgeId`] of each edge
-/// w.r.t. the order in-which they were inserted.
-pub struct SeqEdgeKeys<'a, Ix>
-where
-    Ix: RawIndex,
-{
-    pub(crate) keys: slice::Iter<'a, EdgeId<Ix>>,
+    pub(crate) edges: &'a EdgeMap<E, K, Ix, S>,
 }
 /// [`SeqEdgeValues`] is an iterator producing references to the edges of a hypergraph w.r.t. the
 /// order in-which they were inserted.
@@ -54,19 +51,7 @@ where
     Ix: RawIndex,
 {
     pub(crate) keys: slice::Iter<'a, EdgeId<Ix>>,
-    pub(crate) values: iter::EdgeValues<'a, E, K, Ix, S>,
-}
-/// [`SeqEdgeValuesMut`] is a mutable iterator producing mutable references to the edges of a
-/// hypergraph in a manner that respects the order in-which they were inserted.
-pub struct SeqEdgeValuesMut<'a, E, K, Ix, S>
-where
-    S: BuildHasher + 'a,
-    E: 'a,
-    K: GraphType,
-    Ix: RawIndex,
-{
-    pub(crate) keys: slice::Iter<'a, EdgeId<Ix>>,
-    pub(crate) values: iter::EdgeValuesMut<'a, E, K, Ix, S>,
+    pub(crate) edges: &'a EdgeMap<E, K, Ix, S>,
 }
 
 /*
@@ -82,44 +67,31 @@ where
     type Item = (&'a EdgeId<Ix>, &'a HashEdge<E, K, Ix, S>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(next) = self.keys.next() {
-            // Find the edge with the matching id in the iterator
-            let value = self.iter.find(|(id, _)| id == next)?;
-            // Return the found edge
-            return Some(value);
-        }
-        None
+        let edges = self.edges;
+        self.keys.find_map(|id| edges.get_key_value(id))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.keys.len()))
     }
 }
 
-impl<'a, E, K, Ix, S> Iterator for SeqEdgeIterMut<'a, E, K, Ix, S>
+impl<'a, E, K, Ix, S> Iterator for SeqEdgeKeys<'a, E, K, Ix, S>
 where
     S: BuildHasher + 'a,
     E: 'a,
     K: GraphType,
     Ix: HashIndex,
 {
-    type Item = (&'a EdgeId<Ix>, &'a mut HashEdge<E, K, Ix, S>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(next) = self.keys.next() {
-            // Find the edge with the matching id in the iterator
-            let value = self.iter.find(|(id, _)| id == next)?;
-            // Return the found edge
-            return Some(value);
-        }
-        None
-    }
-}
-
-impl<'a, Ix> Iterator for SeqEdgeKeys<'a, Ix>
-where
-    Ix: RawIndex,
-{
     type Item = &'a EdgeId<Ix>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.keys.next()
+        let edges = self.edges;
+        self.keys.find(|id| edges.contains_key(*id))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.keys.len()))
     }
 }
 
@@ -133,32 +105,11 @@ where
     type Item = &'a HashEdge<E, K, Ix, S>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(next) = self.keys.next() {
-            // Find the node with the matching id in the nodes iterator
-            let value = self.values.find(|v| v.id() == next)?;
-            // Return the found node
-            return Some(value);
-        }
-        None
+        let edges = self.edges;
+        self.keys.find_map(|id| edges.get(id))
     }
-}
 
-impl<'a, E, K, Ix, S> Iterator for SeqEdgeValuesMut<'a, E, K, Ix, S>
-where
-    S: BuildHasher + 'a,
-    E: 'a,
-    K: GraphType,
-    Ix: HashIndex,
-{
-    type Item = &'a mut HashEdge<E, K, Ix, S>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(next) = self.keys.next() {
-            // Find the node with the matching id in the nodes iterator
-            let value = self.values.find(|v| v.id() == next)?;
-            // Return the found node
-            return Some(value);
-        }
-        None
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.keys.len()))
     }
 }

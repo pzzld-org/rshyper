@@ -2,10 +2,29 @@
     appellation: index <module>
     authors: @FL03
 */
+
 /// a simple trait for denoting types compatible with to be used as indices in a hypergraph.
 /// **note:** the trait is sealed to prevent external implementations.
 pub trait RawIndex: 'static + Send + Sync + core::fmt::Debug + core::fmt::Display {
-    private!();
+    private! {}
+    /// returns the value one step after `self`, or [`None`] when that value would overflow
+    /// (or, for floats, would not be a new finite value). Id allocation uses it so an
+    /// exhausted index space is an error rather than a panic or a wrap-around that reissues
+    /// old ids.
+    #[doc(hidden)]
+    fn checked_step(&self) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        None
+    }
+}
+
+pub trait Idx: RawIndex
+where
+    Self: Clone + Copy + Eq + PartialOrd + core::hash::Hash,
+{
+    type Kind: ?Sized;
 
     /// converts the index to a string representation.
     #[cfg(feature = "alloc")]
@@ -13,7 +32,7 @@ pub trait RawIndex: 'static + Send + Sync + core::fmt::Debug + core::fmt::Displa
         alloc::format!("{self}")
     }
 }
-/// The [`HashIndex`] trait extends the [`StdIndex`] trait to include additional operations and
+/// The [`HashIndex`] trait extends the [`RawIndex`] trait to include additional operations and
 /// behaviours commonly expected from indices in a hypergraph.
 ///
 /// **note:** this trait is automatically implemented for all [`RawIndex`] implementors that
@@ -129,36 +148,70 @@ where
     seal!();
 }
 
-#[cfg(feature = "alloc")]
-impl RawIndex for alloc::boxed::Box<dyn RawIndex> {
-    seal!();
-}
-
-#[cfg(feature = "alloc")]
-impl<'a> RawIndex for alloc::boxed::Box<dyn RawIndex + Send + Sync + 'a> {
-    seal!();
-}
-
 macro_rules! impl_raw_index {
-    ($($t:ty),* $(,)?) => {
+    ($($T:ty),* $(,)?) => {
         $(
-            impl_raw_index!(@impl $t);
+            impl_raw_index!(@impl RawIndex for $T);
         )*
     };
-    (@impl $t:ty) => {
-        impl RawIndex for $t {
-            seal!();
+    (@impl $trait:ident for $t:ty) => {
+        impl $crate::idx::$trait for $t {
+            seal! {}
         }
+    };
+    (@int $($t:ty),* $(,)?) => {
+        $(
+            impl $crate::idx::RawIndex for $t {
+                seal! {}
+
+                fn checked_step(&self) -> Option<Self> {
+                    self.checked_add(1)
+                }
+            }
+        )*
+    };
+    (@float $($t:ty),* $(,)?) => {
+        $(
+            impl $crate::idx::RawIndex for $t {
+                seal! {}
+
+                fn checked_step(&self) -> Option<Self> {
+                    let next = *self + 1.0;
+                    // past 2^mantissa `x + 1.0 == x`, which would reissue the same id
+                    (next.is_finite() && next > *self).then_some(next)
+                }
+            }
+        )*
     };
 }
 
 impl_raw_index! {
-    usize, u8, u16, u32, u64, u128,
+    @int usize, u8, u16, u32, u64, u128,
     isize, i8, i16, i32, i64, i128,
-    f32, f64, char, str
+}
+
+impl_raw_index! {
+    @float f32, f64
+}
+
+impl_raw_index! {
+    char, str
 }
 
 #[cfg(feature = "alloc")]
-impl_raw_index! {
-    alloc::string::String,
+mod impl_alloc {
+    use super::RawIndex;
+    use alloc::boxed::Box;
+
+    impl_raw_index! {
+        alloc::string::String,
+    }
+
+    impl RawIndex for Box<dyn RawIndex> {
+        seal! {}
+    }
+
+    impl RawIndex for Box<dyn RawIndex + Send + Sync + 'static> {
+        seal! {}
+    }
 }

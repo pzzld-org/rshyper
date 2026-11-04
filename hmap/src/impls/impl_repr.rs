@@ -58,7 +58,7 @@ impl<E, A, S, Ix> HyperMap<(), E, A, S>
 where
     A: GraphProps<Ix = Ix>,
     S: BuildHasher,
-    Ix: Copy + HashIndex + AddStep<Output = Ix>,
+    Ix: Copy + HashIndex + AddStep<Output = Ix> + PartialOrd,
 {
     /// add an empty node with weight `()` and return its ID
     pub fn add_empty_node(&mut self) -> Result<VertexId<Ix>> {
@@ -71,7 +71,7 @@ impl<N, E, A, S, Ix> HyperMap<Option<N>, E, A, S>
 where
     A: GraphProps<Ix = Ix>,
     S: BuildHasher,
-    Ix: Copy + HashIndex + AddStep<Output = Ix>,
+    Ix: Copy + HashIndex + AddStep<Output = Ix> + PartialOrd,
 {
     /// insert [`Some`] vertex with weight `T` and return its ID
     pub fn add_some_node(&mut self, weight: N) -> Result<VertexId<Ix>> {

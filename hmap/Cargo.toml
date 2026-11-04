@@ -16,7 +16,7 @@ version.workspace = true
 
 [package.metadata.docs.rs]
 all-features = false
-features = ["full"]
+features = ["default"]
 rustc-args = ["--cfg", "docsrs"]
 version = "v{{version}}"
 
@@ -31,6 +31,10 @@ doc = true
 doctest = true
 test = true
 
+[[bench]]
+harness = false
+name = "walks"
+required-features = ["algo", "std"]
 
 [[bench]]
 harness = false
@@ -44,30 +48,12 @@ required-features = [
 [[bench]]
 harness = false
 name = "hyper_map"
-required-features = [
-  "rand",
-  "std",
-]
+required-features = ["rand", "std"]
 
-[[test]]
-name = "astar"
+[[bench]]
+harness = false
+name = "incidence"
 required-features = ["algo", "std"]
-
-[[test]]
-name = "bft"
-required-features = ["algo", "std"]
-
-[[test]]
-name = "dft"
-required-features = ["algo", "std"]
-
-[[test]]
-name = "dijkstra"
-required-features = ["algo", "std"]
-
-[[test]]
-name = "hyper_map"
-required-features = ["std"]
 
 [dependencies]
 rshyper-algo = { optional = true, workspace = true }
@@ -87,6 +73,7 @@ strum = { workspace = true }
 # math
 num-traits = { workspace = true }
 # random
+getrandom = { optional = true, workspace = true }
 rand = { optional = true, workspace = true }
 rand_distr = { optional = true, workspace = true }
 # serialization
@@ -122,9 +109,9 @@ nightly = [
 algo = ["dep:rshyper-algo"]
 
 # ********* [FF] Dependencies *********
-# std is required, this is more symbolic then anything
 std = [
   "alloc",
+  "getrandom?/std",
   "hashbrown/default",
   "num-traits/std",
   "rand?/std",
@@ -145,6 +132,7 @@ wasi = [
 
 wasm = [
   "alloc",
+  "getrandom?/wasm_js",
   "rayon?/web_spin_lock",
   "rshyper-algo?/wasm",
   "rshyper-core/wasm",
@@ -184,6 +172,7 @@ rayon = [
 ]
 
 rng = [
+  "dep:getrandom",
   "rand?/small_rng",
   "rand?/thread_rng",
   "rshyper-core/rng",

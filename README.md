@@ -1,109 +1,52 @@
 # rshyper
 
 [![crates.io](https://img.shields.io/crates/v/rshyper?style=for-the-badge&logo=rust)](https://crates.io/crates/rshyper)
-[![docs.rs](https://img.shields.io/docsrs/rshyper?style=for-the-badge&logo=docs.rs)](https://docs.rs/rshyper)
-[![GitHub License](https://img.shields.io/github/license/FL03/rshyper?style=for-the-badge&logo=github)](LICENSE)
+[![docs.rs](https://img.shields.io/docsrs/rshyper?style=for-the-badge)](https://docs.rs/rshyper)
 
-***
+**A general-purpose Rust hypergraph framework, under active development.** The published version is [v0.2.0](https://github.com/pzzld-org/rshyper/releases/tag/v0.2.0).
 
-_**Warning: The library is still in development so prepare for a shifting api...**_
+## Workspace
 
-`rshyper` is designed to be a complete framework for hypergraphs in Rust. Currently, it provides a map-based hypergraph implementation with a focus on performance and usability. The library is built to be extensible, allowing for future enhancements and features.
+| Crate | Role |
+| --- | --- |
+| `rshyper-core` | Nodes, edges, incidence and index/type abstractions |
+| `rshyper-hmap` | In-memory map-backed hypergraph |
+| `rshyper-algo` | BFS, DFS, A* and Dijkstra implementations; precise higher-order semantics are under qualification |
+| `rshyper` | Public facade, feature forwarding and macros |
 
-## Usage
+Hypergraph data types and operators are **not** a durable storage engine, a verified distributed protocol, or a universal directed shortest-path contract.
 
-To get started with the crate, begin by adding the following to your `Cargo.toml`:
+## Installation
+
+For the released crate:
 
 ```toml
-[dependencies.rshyper]
-features = [
-    "hyper_map",
-    "macros",
-]
-version = "0.1.x"
+[dependencies]
+rshyper = { version = "0.2.0", features = ["hyper_map", "macros"] }
 ```
 
-### Features
+See the [examples directory](https://github.com/pzzld-org/rshyper/tree/main/rshyper/examples), the [crate documentation](https://docs.rs/rshyper), whose examples compile as doctests, and [QUICKSTART.md](https://github.com/pzzld-org/rshyper/blob/main/QUICKSTART.md). The API is pre-1.0 and may change between minor versions.
 
-The `rshyper` library provides several features to enhance and isolate its functionality:
+## Development
 
-- `hyper_map` - A map-based hypergraph implementation.
-- `macros` - A set of macros to simplify hypergraph creation and manipulation.
-
-#### Dependency related features
-
-- `rand` - Parallel processing capabilities for efficient graph operations.
-- `rayon` - Parallel processing capabilities for efficient graph operations.
-- `serde` - Support for serialization and deserialization of hypergraphs.
-- `wasm` - WebAssembly support for running hypergraph operations in the browser.
-
-### Examples
-
-For more detailed examples, please refer to the [examples directory](https://github.com/FL03/rshyper/blob/main/rshyper/examples).
-
-#### _Example #1: Basic Usage_
-
-```rust
-extern crate rshyper;
-
-use rshyper::UnHyperMap;
-
-fn main() -> rshyper::Result<()> {
-    // initialize a new instance of a hypergraph
-    let mut graph = UnHyperMap::<usize, usize>::undirected();
-    // use the macro to insert nodes into the graph
-    rshyper::hypergraph! {
-        graph {
-            nodes: {
-                let v0;
-                let v1 = 2;
-                let v2 = 3;
-                let v3 = 4;
-            };
-            edges: {
-                let e0 = [v0, v1];
-                let e1 = [v0, v2];
-                let e2 = [v1, v2, v3];
-            };
-        }
-    }
-    // verify the order (no. of nodes) within the graph
-    assert_eq!(graph.order(), 4);
-    // verify the size (no. of edges) within the graph
-    assert_eq!(graph.size(), 3);
-
-    // Get neighbors of vertex v1
-    let neighbors = graph.neighbors(&v1)?;
-    println!("Neighbors of {}: {:?}", v1, neighbors);
-
-    // Get degree of vertex v1
-    let degree = graph.get_degree_of_node(&v1);
-    println!("Degree of {v1}: {degree}");
-
-    // Remove a vertex
-    graph.remove_vertex(&v2)?;
-    println!("Removed vertex {v2}");
-
-    println!("---------\nFinal graph state: {:?}", graph);
-    Ok(())
-}
+```sh
+cargo test --workspace --locked
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo test --workspace --doc --locked
+nix flake check --no-write-lock-file
+nix build --no-write-lock-file
 ```
 
-## Getting Started
+**These are the validation targets.** The toolchain pin and the full CI/feature matrix are still open under [#108](https://github.com/pzzld-org/rshyper/issues/108). Check local `rust-toolchain.toml`, `flake.nix`, `flake.lock`, the Cargo feature graph and CI before attempting nightly/no_std or WASM-specific targets.
 
-View the [QUICKSTART](https://github.com/FL03/rshyper/blob/main/QUICKSTART.md) guide for a detailed introduction to using `rshyper`, including how to set up your environment, basic operations, and examples of hypergraph manipulation.
+## Project coordination
 
-## Contributing
+- [AGENTS.md](https://github.com/pzzld-org/rshyper/blob/main/AGENTS.md): agent worktree, source-custody and acceptance contract.
+- [Puzzled Linear project](https://linear.app/pzzld/project/rshyper-6605c340fb75): objectives/milestones.
+- [GitHub issues](https://github.com/pzzld-org/rshyper/issues): engineering and test evidence.
+- Silo project `rshyper`: maintained formal semantic contract and research notes; external consumers such as Chaos own storage and execution.
 
-Pull requests are welcome. For major changes, please open an issue first
-to discuss what you would like to change.
+Contributions should include reproducible failures/tests, exact environment, and compatibility notes. See [CONTRIBUTING.md](https://github.com/pzzld-org/rshyper/blob/main/CONTRIBUTING.md) and [SECURITY.md](https://github.com/pzzld-org/rshyper/blob/main/SECURITY.md).
 
-Please make sure to update tests as appropriate.
-
-## License
-
-This project is licensed under the Apache-2.0 License - see the [LICENSE](https://github.com/FL03/rshyper/blob/main/LICENSE) file for details.
-
-## Security
-
-View the [Security Policy](https://github.com/FL03/rshyper/blob/main/SECURITY.md) for details on how to report security vulnerabilities.
+Licensed under [Apache-2.0](https://github.com/pzzld-org/rshyper/blob/main/LICENSE).

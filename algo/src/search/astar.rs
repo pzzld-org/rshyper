@@ -6,8 +6,8 @@
 
 use crate::search::Heuristic;
 use hashbrown::{DefaultHashBuilder, HashMap};
-use rshyper::idx::{VertexId, VertexSet};
-use rshyper::{GraphProps, HyperGraph};
+use rshyper_core::idx::{VertexId, VertexSet};
+use rshyper_core::{GraphProps, HyperGraph};
 
 pub(crate) type SourceMap<Ix, S = DefaultHashBuilder> = HashMap<VertexId<Ix>, VertexId<Ix>, S>;
 

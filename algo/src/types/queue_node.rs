@@ -5,7 +5,10 @@
 use core::cmp::Ordering;
 use rshyper::idx::{RawIndex, VertexId};
 
-/// A node in the priority queue for Dijkstra's algorithm
+/// A node in the priority queue for Dijkstra's algorithm.
+///
+/// Nodes compare by cost in *reverse* (both `Ord` and `PartialOrd`), so a
+/// [`BinaryHeap`](alloc::collections::BinaryHeap) pops the cheapest node first.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct QueueNode<Idx, T>
 where
@@ -161,7 +164,8 @@ where
     T: PartialEq + PartialOrd,
 {
     fn partial_cmp(&self, other: &QueueNode<Idx, T>) -> Option<Ordering> {
-        self.cost().partial_cmp(other.cost())
+        // must agree with `Ord`: `BinaryHeap` sifts with these operators
+        Some(self.cmp(other))
     }
 }
 
@@ -171,7 +175,7 @@ where
     T: PartialEq + PartialOrd,
 {
     fn partial_cmp(&self, other: &&'a QueueNode<Idx, T>) -> Option<Ordering> {
-        self.cost().partial_cmp(other.cost())
+        other.cost().partial_cmp(self.cost())
     }
 }
 
@@ -181,7 +185,7 @@ where
     T: PartialEq + PartialOrd,
 {
     fn partial_cmp(&self, other: &&'a mut QueueNode<Idx, T>) -> Option<Ordering> {
-        self.cost().partial_cmp(other.cost())
+        other.cost().partial_cmp(self.cost())
     }
 }
 
@@ -191,7 +195,7 @@ where
     T: PartialEq + PartialOrd,
 {
     fn partial_cmp(&self, other: &QueueNode<Idx, T>) -> Option<Ordering> {
-        self.cost().partial_cmp(other.cost())
+        other.cost().partial_cmp(self.cost())
     }
 }
 
@@ -201,6 +205,6 @@ where
     T: PartialEq + PartialOrd,
 {
     fn partial_cmp(&self, other: &QueueNode<Idx, T>) -> Option<Ordering> {
-        self.cost().partial_cmp(other.cost())
+        other.cost().partial_cmp(self.cost())
     }
 }

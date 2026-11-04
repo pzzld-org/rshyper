@@ -1,13 +1,13 @@
 /*
-    appellation: impl_hyper_facet <module>
-    authors: @FL03
+    Appellation: impl_edge <module>
+    Created At: 2026.01.10:10:43:36
+    Contrib: @FL03
 */
-use crate::edge::Edge;
+use crate::edge::{HyperEdge, Link};
 use crate::idx::{EdgeId, RawIndex};
-use crate::rel::Link;
 use crate::{Directed, Domain, GraphType, Undirected, Weight};
 
-impl<T, S, Idx> Edge<T, S, Directed, Idx>
+impl<T, S, Idx> HyperEdge<T, S, Directed, Idx>
 where
     Idx: RawIndex,
     S: Domain<Idx>,
@@ -18,7 +18,7 @@ where
     }
 }
 
-impl<T, S, I> Edge<T, S, Undirected, I>
+impl<T, S, I> HyperEdge<T, S, Undirected, I>
 where
     I: RawIndex,
     S: Domain<I>,
@@ -29,7 +29,7 @@ where
     }
 }
 
-impl<T, S, K, Idx> Default for Edge<T, S, K, Idx>
+impl<T, S, K, Idx> Default for HyperEdge<T, S, K, Idx>
 where
     Idx: Default + RawIndex,
     K: GraphType,
@@ -44,7 +44,7 @@ where
     }
 }
 
-impl<T, S, K, Idx> core::fmt::Debug for Edge<T, S, K, Idx>
+impl<T, S, K, Idx> core::fmt::Debug for HyperEdge<T, S, K, Idx>
 where
     Idx: RawIndex,
     K: GraphType,
@@ -59,7 +59,7 @@ where
     }
 }
 
-impl<T, S, K, Idx> core::fmt::Display for Edge<T, S, K, Idx>
+impl<T, S, K, Idx> core::fmt::Display for HyperEdge<T, S, K, Idx>
 where
     Idx: RawIndex,
     K: GraphType,
@@ -76,7 +76,7 @@ where
     }
 }
 
-impl<T, S, K, Idx> From<Link<S, K, Idx>> for Edge<T, S, K, Idx>
+impl<T, S, K, Idx> From<Link<S, K, Idx>> for HyperEdge<T, S, K, Idx>
 where
     Idx: RawIndex,
     K: GraphType,
@@ -88,18 +88,18 @@ where
     }
 }
 
-impl<T, S, K, Idx> From<Edge<T, S, K, Idx>> for Link<S, K, Idx>
+impl<T, S, K, Idx> From<HyperEdge<T, S, K, Idx>> for Link<S, K, Idx>
 where
     Idx: RawIndex,
     K: GraphType,
     S: Domain<Idx>,
 {
-    fn from(facet: Edge<T, S, K, Idx>) -> Self {
+    fn from(facet: HyperEdge<T, S, K, Idx>) -> Self {
         facet.link
     }
 }
 
-impl<T, S, K, Idx> From<EdgeId<Idx>> for Edge<T, S, K, Idx>
+impl<T, S, K, Idx> From<EdgeId<Idx>> for HyperEdge<T, S, K, Idx>
 where
     Idx: RawIndex,
     K: GraphType,
@@ -111,7 +111,7 @@ where
     }
 }
 
-impl<T, S, K, Idx> AsRef<Weight<T>> for Edge<T, S, K, Idx>
+impl<T, S, K, Idx> AsRef<Weight<T>> for HyperEdge<T, S, K, Idx>
 where
     Idx: RawIndex,
     K: GraphType,
@@ -122,7 +122,7 @@ where
     }
 }
 
-impl<T, S, K, Idx> AsMut<Weight<T>> for Edge<T, S, K, Idx>
+impl<T, S, K, Idx> AsMut<Weight<T>> for HyperEdge<T, S, K, Idx>
 where
     Idx: RawIndex,
     K: GraphType,
@@ -133,7 +133,7 @@ where
     }
 }
 
-impl<T, S, K, Idx> core::borrow::Borrow<EdgeId<Idx>> for Edge<T, S, K, Idx>
+impl<T, S, K, Idx> core::borrow::Borrow<EdgeId<Idx>> for HyperEdge<T, S, K, Idx>
 where
     Idx: RawIndex,
     K: GraphType,
@@ -144,7 +144,7 @@ where
     }
 }
 
-impl<T, S, K, Idx> core::borrow::BorrowMut<EdgeId<Idx>> for Edge<T, S, K, Idx>
+impl<T, S, K, Idx> core::borrow::BorrowMut<EdgeId<Idx>> for HyperEdge<T, S, K, Idx>
 where
     Idx: RawIndex,
     K: GraphType,
@@ -155,7 +155,7 @@ where
     }
 }
 
-impl<T, S, K, Idx> core::ops::Deref for Edge<T, S, K, Idx>
+impl<T, S, K, Idx> core::ops::Deref for HyperEdge<T, S, K, Idx>
 where
     Idx: RawIndex,
     K: GraphType,
@@ -168,7 +168,7 @@ where
     }
 }
 
-impl<T, S, K, Idx> core::ops::DerefMut for Edge<T, S, K, Idx>
+impl<T, S, K, Idx> core::ops::DerefMut for HyperEdge<T, S, K, Idx>
 where
     Idx: RawIndex,
     K: GraphType,

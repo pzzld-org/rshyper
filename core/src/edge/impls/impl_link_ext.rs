@@ -1,30 +1,44 @@
 /*
-    appellation: impl_edge <module>
+    appellation: impl_link_ext <module>
     authors: @FL03
 */
+use crate::edge::{HyperEdgeRepr, Link, RawEdge};
 use crate::idx::{EdgeId, RawIndex, VertexId};
-use crate::rel::Link;
-use crate::{Directed, Domain, GraphType, Undirected};
+use crate::{Domain, GraphType};
 
-impl<S, Idx> Link<S, Directed, Idx>
+impl<S, K, Idx> RawEdge for Link<S, K, Idx>
 where
     Idx: RawIndex,
+    K: GraphType,
     S: Domain<Idx>,
 {
-    /// returns a new [`Directed`] hyperedge with the given id and nodes
-    pub fn directed(id: EdgeId<Idx>, nodes: S) -> Self {
-        Self::new(id, nodes)
+    type Kind = K;
+    type Index = Idx;
+    type Store = S;
+
+    seal!();
+
+    fn index(&self) -> &EdgeId<Idx> {
+        self.id()
+    }
+
+    fn domain(&self) -> &S {
+        self.domain()
+    }
+
+    fn domain_mut(&mut self) -> &mut S {
+        self.domain_mut()
     }
 }
 
-impl<S, Idx> Link<S, Undirected, Idx>
+impl<S, K, Idx> HyperEdgeRepr for Link<S, K, Idx>
 where
-    Idx: RawIndex,
     S: Domain<Idx>,
+    Idx: RawIndex,
+    K: GraphType,
 {
-    /// creates a new [`Undirected`] hyperedge with the given id and nodes
-    pub fn undirected(id: EdgeId<Idx>, nodes: S) -> Self {
-        Self::new(id, nodes)
+    fn new(id: EdgeId<Idx>, vertices: S) -> Self {
+        Self::new(id, vertices)
     }
 }
 

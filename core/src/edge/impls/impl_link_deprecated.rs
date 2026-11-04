@@ -4,8 +4,8 @@
 */
 #![allow(deprecated)]
 
+use crate::edge::Link;
 use crate::idx::RawIndex;
-use crate::rel::Link;
 use crate::{Domain, GraphType};
 
 #[doc(hidden)]
@@ -16,7 +16,7 @@ where
     S: Domain<Idx>,
 {
     #[deprecated(
-        note = "Use `Edge::from_domain` instead; this method will be removed in the next major release.",
+        note = "Use `Link::from_domain` instead; this method will be removed in the next major release.",
         since = "0.1.2"
     )]
     pub fn from_points(nodes: S) -> Self
@@ -26,7 +26,7 @@ where
         Self::from_domain(nodes)
     }
     #[deprecated(
-        note = "Use `Edge::domain` instead; this method will be removed in the next major release.",
+        note = "Use `Link::domain` instead; this method will be removed in the next major release.",
         since = "0.1.2"
     )]
     /// returns an immutable reference to the nodes
@@ -34,7 +34,7 @@ where
         self.domain()
     }
     #[deprecated(
-        note = "Use `Edge::domain_mut` instead; this method will be removed in the next major release.",
+        note = "Use `Link::domain_mut` instead; this method will be removed in the next major release.",
         since = "0.1.2"
     )]
     /// returns a mutable reference to the nodes
@@ -42,14 +42,14 @@ where
         self.domain_mut()
     }
     #[deprecated(
-        note = "Use `Edge::set_domain` instead; this method will be removed in the next major release.",
+        note = "Use `Link::set_domain` instead; this method will be removed in the next major release.",
         since = "0.1.2"
     )]
     pub fn set_points(&mut self, nodes: S) -> &mut Self {
         self.set_domain(nodes)
     }
     #[deprecated(
-        note = "Use `Edge::with_domain` instead; this method will be removed in the next major release.",
+        note = "Use `Link::with_domain` instead; this method will be removed in the next major release.",
         since = "0.1.2"
     )]
     pub fn with_points<S2: Domain<Idx>>(self, nodes: S2) -> Link<S2, K, Idx> {

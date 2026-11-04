@@ -66,13 +66,12 @@ impl IndexError {
             to: Box::new(to),
         }
     }
-    /// initialize a new [`HyperedgeDoesNotExist`](IndexError::HyperedgeDoesNotExist) error
-    /// variant
+    /// initialize a new [`EdgeDoesNotExist`](IndexError::EdgeDoesNotExist) error variant
     pub fn hyperedge_does_not_exist<Idx: RawIndex>(index: EdgeId<Idx>) -> Self {
         IndexError::EdgeDoesNotExist(Box::new(index.value()))
     }
-    /// initialize a new [`VertexDoesNotExist`](IndexError::VertexDoesNotExist) error variant
+    /// initialize a new [`NodeDoesNotExist`](IndexError::NodeDoesNotExist) error variant
     pub fn vertex_does_not_exist<Idx: RawIndex>(index: VertexId<Idx>) -> Self {
-        IndexError::NodeDoesNotExist(index.into_raw_box())
+        IndexError::NodeDoesNotExist(index.into_boxed_value())
     }
 }

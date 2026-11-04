@@ -37,8 +37,8 @@ pub trait IntoWeight<T> {
 #[repr(transparent)]
 pub struct Weight<T>(pub T);
 
-/// An [`Weightless`] types is a type alias for a [`Weight`] that uses the [`UnWeight`] marker
-/// type to indicate that it has no weight.
+/// An [`Weightless`] types is a type alias for a [`Weight`] that uses the
+/// [`PhantomData`](core::marker::PhantomData) marker type to indicate that it has no weight.
 pub type Weightless<T> = Weight<core::marker::PhantomData<T>>;
 
 /*

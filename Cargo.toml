@@ -20,7 +20,7 @@ categories = [
 ]
 description = "This crate focuses on hypergraphs"
 edition = "2024"
-homepage = "https://github.com/FL03/rshyper/wiki"
+homepage = "https://github.com/pzzld-org/rshyper/wiki"
 keywords = [
   "hypergraph",
   "graph",
@@ -28,20 +28,18 @@ keywords = [
 ]
 license = "Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/FL03/rshyper.git"
+repository = "https://github.com/pzzld-org/rshyper.git"
 rust-version = "1.85.0"
-version = "0.1.9"
+version = "0.2.0"
 
 [workspace.dependencies]
 # local
-rshyper = { default-features = false, path = "rshyper", version = "0.1.9" }
-rshyper-algo = { default-features = false, path = "algo", version = "0.1.9" }
-rshyper-core = { default-features = false, path = "core", version = "0.1.9" }
-rshyper-hmap = { default-features = false, path = "hmap", version = "0.1.9" }
+rshyper = { default-features = false, path = "rshyper", version = "0.2.0" }
+rshyper-algo = { default-features = false, path = "algo", version = "0.2.0" }
+rshyper-core = { default-features = false, path = "core", version = "0.2.0" }
+rshyper-hmap = { default-features = false, path = "hmap", version = "0.2.0" }
 # custom
 contained = { default-features = false, features = ["macros"], version = "0.2.3" }
-rspace-traits = { default-features = false, features = ["macros"], version = "0.0.7" }
-variants = { default-features = false, features = ["derive"], version = "0.0.1" }
 # benchmarking
 criterion = { version = "0.8" }
 # concurrency & parallelism

@@ -16,7 +16,7 @@ version.workspace = true
 
 [package.metadata.docs.rs]
 all-features = false
-features = ["full"]
+features = ["default"]
 rustc-args = ["--cfg", "docsrs"]
 version = "v{{version}}"
 
@@ -29,11 +29,16 @@ bench = false
 crate-type = ["lib"]
 doc = true
 doctest = true
+path = "lib.rs"
 test = true
 
 [[example]]
 name = "hyper_map"
 required-features = ["hyper_map", "macros", "tracing"]
+
+[[test]]
+name = "algo"
+required-features = ["algo", "hyper_map"]
 
 [[test]]
 name = "macros"
@@ -68,16 +73,19 @@ full = [
 ]
 
 # ************* [FF:Flags] *************
-algo = ["dep:rshyper-algo"]
+algo = ["dep:rshyper-algo", "rshyper-hmap?/algo"]
 
 hash_graph = ["hyper_map"]
 
 hyper_map = [
   "dep:rshyper-hmap",
+  "hashbrown",
   "std",
 ]
 
-macros = []
+macros = [
+  "rshyper-core/macros",
+]
 
 # ************* [FF:Environments] *************
 nightly = [
@@ -113,6 +121,10 @@ alloc = [
   "rshyper-algo?/alloc",
   "rshyper-core/alloc",
   "rshyper-hmap?/alloc",
+]
+
+hashbrown = [
+  "rshyper-core/hashbrown",
 ]
 
 json = [

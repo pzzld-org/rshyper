@@ -65,6 +65,32 @@ where
 {
 }
 
+macro_rules! impl_domain {
+    (@impl $trait:ident for $t:ident<$T:ident>) => {
+        impl<$T> $crate::$trait for $t<$crate::VertexId<$T>>
+        where
+            $T: $crate::idx::RawIndex,
+        {
+            type Key = $crate::VertexId<$T>;
+
+            seal!();
+
+            fn len(&self) -> usize {
+                <$t<$crate::VertexId<$T>>>::len(self)
+            }
+
+            fn is_empty(&self) -> bool {
+                <$t<$crate::VertexId<$T>>>::is_empty(self)
+            }
+        }
+    };
+    ($($t:ident<$T:ident>),* $(,)?) => {
+        $(
+            impl_domain!(@impl RawDomain for $t<$T>);
+        )*
+    };
+}
+
 #[cfg(feature = "hashbrown")]
 mod impl_hb {
     use super::RawDomain;
@@ -113,32 +139,6 @@ mod impl_hb {
 mod impl_alloc {
     use alloc::collections::{BTreeSet, VecDeque};
     use alloc::vec::Vec;
-
-    macro_rules! impl_domain {
-        (@impl $t:ident<$T:ident>) => {
-            impl<$T> $crate::RawDomain for $t<$crate::idx::VertexId<$T>>
-            where
-                $T: $crate::idx::RawIndex,
-            {
-                type Key = $crate::idx::VertexId<$T>;
-
-                seal!();
-
-                fn len(&self) -> usize {
-                    <$t<$crate::idx::VertexId<$T>>>::len(self)
-                }
-
-                fn is_empty(&self) -> bool {
-                    <$t<$crate::idx::VertexId<$T>>>::is_empty(self)
-                }
-            }
-        };
-        ($($t:ident<$T:ident>),* $(,)?) => {
-            $(
-                impl_domain!(@impl $t<$T>);
-            )*
-        };
-    }
 
     impl_domain! {
         BTreeSet<I>,

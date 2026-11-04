@@ -5,8 +5,8 @@
 //! this module implements Dijkstra's shortest-path algorithm for hypergraphs
 
 use hashbrown::{DefaultHashBuilder, HashMap};
-use rshyper::idx::{VertexId, VertexSet};
-use rshyper::{GraphProps, HyperGraph};
+use rshyper_core::idx::{VertexId, VertexSet};
+use rshyper_core::{GraphProps, HyperGraph};
 
 /// a type alias for a map of distances for vertices in the graph
 pub(crate) type Distances<K, V = f64, S = DefaultHashBuilder> = HashMap<VertexId<K>, V, S>;

@@ -24,6 +24,7 @@ impl<T> Weightless<T> {
         self.init_with(Default::default)
     }
 }
+
 impl<T> Weight<&T> {
     /// returns a new [`Weight`] using a clone of the current inner value.
     #[inline]
