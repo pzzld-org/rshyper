@@ -21,9 +21,9 @@ use std::hash::RandomState as DefaultHashBuilder;
 
 /// a type alias for a [`usize`] used to define the default index type throughout the crate.
 pub type Udx = usize;
-/// a type alias for an [`Index`] whose _kind_ is [`EdgeIndex`]
+/// a type alias for an [`IndexBase`] whose _kind_ is [`EdgeIndex`]
 pub type EdgeId<T = Udx> = IndexBase<T, EdgeIndex>;
-/// a type alias for an [`Index`] whose _kind_ is [`VertexIndex`]
+/// a type alias for an [`IndexBase`] whose _kind_ is [`VertexIndex`]
 pub type VertexId<T = Udx> = IndexBase<T, VertexIndex>;
 /// a type alias for a fixed sized array of [`IndexBase`]
 pub type IndexArray<T, const N: usize, K = VertexIndex> = [IndexBase<T, K>; N];

@@ -165,7 +165,7 @@ where
     {
         self.get_edge_mut(index).map(|edge| edge.domain_mut())
     }
-    /// returns an immutable reference to the [`HashFacet`] associated with the given index
+    /// returns an immutable reference to the [`HashEdge`] associated with the given index
     pub fn get_edge<Q>(&self, index: &Q) -> Result<&HashEdge<E, K, Ix, S>>
     where
         Q: ?Sized + Eq + Hash,
@@ -173,7 +173,7 @@ where
     {
         self.edges().get(index).ok_or_else(Error::edge_not_found)
     }
-    /// returns a mutable reference to the [`HashFacet`] associated with the given index
+    /// returns a mutable reference to the [`HashEdge`] associated with the given index
     pub fn get_edge_mut<Q>(&mut self, index: &Q) -> Result<&mut HashEdge<E, K, Ix, S>>
     where
         Q: ?Sized + Eq + Hash,

@@ -4,7 +4,7 @@
 //! ## Components
 //!
 //! - [`attrs`]: Contains the [`Attrs`] and [`GraphProps`] types for managing graph attributes.
-//! - [`edge`]: implements the [`Edge`] and [`Surface`] types for representing hyperedges
+//! - [`edge`]: implements the [`HyperEdge`] and [`Link`] types for representing hyperedges
 //! - [`node`]: provides the [`Node`] implementation for representing hypernodes
 //! - [`weight`]: gives the [`Weight`] type for representing weights in a hypergraph
 //!

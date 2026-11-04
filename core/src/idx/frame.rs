@@ -126,7 +126,7 @@ where
     {
         self.edge_mut().step()
     }
-    /// resets the [`Frame`] back to its initial position assuming the logical defaults for both the edge and node indices.
+    /// resets the [`IndexFrame`] back to its initial position assuming the logical defaults for both the edge and node indices.
     pub fn reset(&mut self) -> &mut Self
     where
         T: Default,

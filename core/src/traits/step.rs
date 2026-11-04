@@ -14,7 +14,7 @@ pub trait StepWith<T> {
         F: FnOnce(&T) -> T;
 }
 /// [`StepSelf`] is a trait establishing a common interface for entities that may be progressed,
-/// producing some [`Output`](Step::Output) as a result. The trait is typically used to define
+/// producing some [`Output`](StepSelf::Output) as a result. The trait is typically used to define
 /// generators for indices within the hypergraph.
 pub trait StepSelf {
     /// the expected output type of the step function

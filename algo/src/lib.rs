@@ -2,10 +2,10 @@
 //!
 //! ## Features
 //!
-//! - [`astar`]: the A* search algorithm for hypergraphs
-//! - [`breadth_first`]: the breadth-first search algorithm for hypergraphs
-//! - [`depth_first`]: the depth-first search algorithm for hypergraphs
-//! - [`dijkstra`]: Dijkstra's algorithm for finding the shortest path in hypergraphs
+//! - [`astar`](search::astar): the A* search algorithm for hypergraphs
+//! - [`breadth_first`](search::breadth_first): the breadth-first search algorithm for hypergraphs
+//! - [`depth_first`](search::depth_first): the depth-first search algorithm for hypergraphs
+//! - [`dijkstra`](search::dijkstra): Dijkstra's algorithm for finding the shortest path in hypergraphs
 //!
 #![crate_name = "rshyper_algo"]
 #![crate_type = "lib"]
