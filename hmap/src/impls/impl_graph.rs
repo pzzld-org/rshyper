@@ -5,6 +5,7 @@
 use crate::graph::HyperMap;
 use core::borrow::Borrow;
 use core::hash::{BuildHasher, Hash};
+use hashbrown::hash_map::Entry;
 use rshyper_core::edge::{HashEdge, HyperEdge};
 use rshyper_core::idx::{EdgeId, HashIndex, IndexError, VertexId};
 use rshyper_core::{AddStep, Error, GraphProps, GraphType, Node, Result, VertexSet, Weight};
@@ -22,7 +23,7 @@ where
     pub fn add_link<I>(&mut self, vertices: I) -> Result<EdgeId<Ix>>
     where
         I: IntoIterator<Item = VertexId<Ix>>,
-        Ix: AddStep<Output = Ix> + Clone,
+        Ix: AddStep<Output = Ix> + Clone + Ord,
         E: Default,
         S: Default,
     {
@@ -37,7 +38,7 @@ where
     pub fn add_edge<I>(&mut self, vertices: I, weight: Weight<E>) -> Result<EdgeId<Ix>>
     where
         I: IntoIterator<Item = VertexId<Ix>>,
-        Ix: AddStep<Output = Ix> + Clone,
+        Ix: AddStep<Output = Ix> + Clone + Ord,
         S: Default,
     {
         let mut verts = VertexSet::<Ix, S>::default();
@@ -98,7 +99,8 @@ where
         #[cfg(feature = "tracing")]
         tracing::trace!("clearing the hypergraph...");
         // clear the edges
-        self.edges_mut().clear();
+        self.edges.clear();
+        self.incidence.clear();
         // clear the nodes
         self.nodes_mut().clear();
         // clear the history
@@ -107,21 +109,86 @@ where
         tracing::info!("cleared the hypergraph successfully...");
         self
     }
-    /// returns an interator over all the edges within the graph that contains the node
-    /// associated with the given index.
+    /// returns an iterator over the ids of the edges whose domain contains the given vertex,
+    /// in ascending id order, each exactly once. A vertex that is not in the graph yields the
+    /// edges that still name it (none, unless an escape hatch left them behind); use
+    /// [`incident_edges`](Self::incident_edges) to reject unknown vertices.
+    ///
+    /// O(deg) from the incidence index; O(|E|) while the index is stale (see
+    /// [`edges_mut`](Self::edges_mut)).
     pub fn find_edges_with_node<Q>(&self, index: &Q) -> impl Iterator<Item = &EdgeId<Ix>>
     where
-        Q: ?Sized + PartialEq,
+        Q: ?Sized + Eq + Hash,
+        VertexId<Ix>: Borrow<Q>,
+        Ix: Ord,
+    {
+        let (fresh, scan) = if self.incidence.is_stale() {
+            let mut hits = self
+                .edges
+                .iter()
+                .filter(|(_, facet)| facet.domain().contains(index))
+                .map(|(id, _)| id)
+                .collect::<Vec<_>>();
+            hits.sort_unstable();
+            (None, Some(hits))
+        } else {
+            (Some(self.incidence.get(index)), None)
+        };
+        fresh
+            .into_iter()
+            .flatten()
+            .chain(scan.into_iter().flatten())
+    }
+    /// returns the ids of the edges incident to the given vertex, ascending, or
+    /// [`Error::NodeNotFound`] if the vertex is not in the graph. See
+    /// [`find_edges_with_node`](Self::find_edges_with_node) for the cost.
+    pub fn incident_edges<Q>(&self, index: &Q) -> Result<impl Iterator<Item = &EdgeId<Ix>>>
+    where
+        Q: ?Sized + Eq + Hash,
+        VertexId<Ix>: Borrow<Q>,
+        Ix: Ord,
+    {
+        if !self.contains_node(index) {
+            return Err(Error::NodeNotFound);
+        }
+        Ok(self.find_edges_with_node(index))
+    }
+    /// rebuilds the incidence index from the edge map in O(I + |E| log |E|), where `I` is the
+    /// total number of incidences. Call it after editing edges through an escape hatch such as
+    /// [`edges_mut`](Self::edges_mut) to restore O(deg) reads before the next checked edge
+    /// mutation (an insertion, removal, merge or `retain_edges`) does.
+    pub fn reindex(&mut self) -> &mut Self
+    where
+        Ix: Clone + Ord,
+    {
+        self.incidence.rebuild(&self.edges);
+        self
+    }
+    /// the edges whose domain contains `index`, in no particular order
+    fn incident_facets<'a, Q>(
+        &'a self,
+        index: &'a Q,
+    ) -> impl Iterator<Item = &'a HashEdge<E, K, Ix, S>> + 'a
+    where
+        Q: ?Sized + Eq + Hash,
         VertexId<Ix>: Borrow<Q>,
     {
-        // filter the edges to find those that contain the vertex
-        self.edges().iter().filter_map(move |(edge_id, facet)| {
-            if facet.contains(index) {
-                Some(edge_id)
-            } else {
-                None
-            }
-        })
+        let stale = self.incidence.is_stale();
+        let fresh = (!stale).then(|| {
+            self.incidence
+                .get(index)
+                .iter()
+                .filter_map(|id| self.edges.get(id))
+        });
+        let scan = stale.then(|| {
+            self.edges
+                .values()
+                .filter(move |facet| facet.domain().contains(index))
+        });
+        fresh
+            .into_iter()
+            .flatten()
+            .chain(scan.into_iter().flatten())
     }
     #[cfg_attr(
         feature = "tracing",
@@ -141,12 +208,9 @@ where
         }
         // initialize an empty set to hold the neighbors
         let mut neighbors = VertexSet::<Ix, S>::default();
-        // iterate through all the connections
-        self.facets().for_each(|edge| {
-            if edge.contains(index) {
-                neighbors.extend(edge.domain().iter().filter(|&v| v != index).cloned());
-            }
-        });
+        for edge in self.incident_facets(index) {
+            neighbors.extend(edge.domain().iter().filter(|&v| v != index).cloned());
+        }
         Ok(neighbors)
     }
     /// returns the set of vertices composing the given edge
@@ -199,13 +263,17 @@ where
     {
         self.get_edge(index).map(|edge| edge.weight())
     }
-    /// returns a mutable reference to the weight of a hyperedge
+    /// returns a mutable reference to the weight of a hyperedge; unlike
+    /// [`get_edge_mut`](Self::get_edge_mut) this leaves the incidence index fresh.
     pub fn get_edge_weight_mut<Q>(&mut self, index: &Q) -> Result<&mut Weight<E>>
     where
         Q: ?Sized + Eq + Hash,
         EdgeId<Ix>: Borrow<Q>,
     {
-        self.get_edge_mut(index).map(|edge| edge.weight_mut())
+        self.edges
+            .get_mut(index)
+            .map(|edge| edge.weight_mut())
+            .ok_or(Error::EdgeNotFound)
     }
     /// returns the degree of a given vertex where the degree is the number of hyperedges that
     /// contain the vertex
@@ -214,10 +282,11 @@ where
         Q: ?Sized + Eq + Hash,
         VertexId<Ix>: Borrow<Q>,
     {
-        self.edges()
-            .values()
-            .filter(|facet| facet.link().domain().contains(index))
-            .count()
+        if self.incidence.is_stale() {
+            self.incident_facets(index).count()
+        } else {
+            self.incidence.get(index).len()
+        }
     }
     /// returns the weight of a particular vertex
     pub fn get_node<Q>(&self, index: &Q) -> Result<&Node<N, Ix>>
@@ -272,7 +341,7 @@ where
     where
         Q: ?Sized + Eq + Hash,
         EdgeId<Ix>: Borrow<Q>,
-        Ix: AddStep<Output = Ix> + Copy,
+        Ix: AddStep<Output = Ix> + Copy + Ord,
         S: Default,
         for<'a> &'a E: core::ops::Add<Output = E>,
     {
@@ -287,7 +356,7 @@ where
     where
         Q: ?Sized + Eq + Hash,
         EdgeId<Ix>: Borrow<Q>,
-        Ix: AddStep<Output = Ix> + Copy,
+        Ix: AddStep<Output = Ix> + Copy + Ord,
         F: FnOnce(&E, &E) -> E,
         S: Default,
     {
@@ -314,7 +383,7 @@ where
         // initialize a new facet using the merged vertices, new index, and source weight
         let surface = HyperEdge::from_parts(edge_id, vertices, Weight(weight));
         // insert the new hyperedge into the surfaces map
-        self.edges_mut().insert(edge_id, surface);
+        self.insert_indexed(surface);
         // return the new edge ID
         Ok(edge_id)
     }
@@ -323,14 +392,27 @@ where
         feature = "tracing",
         tracing::instrument(skip_all, level = "trace", target = "hyper_map")
     )]
-    /// remove the hyperedge with the given index from the hypergraph
+    /// remove the hyperedge with the given index from the hypergraph.
+    ///
+    /// Updating the incidence index shifts the list of each member, O(Σ deg(v)) over the
+    /// members `v` of the edge (a stale index is rebuilt instead); pruning the edge history
+    /// adds O(h).
     pub fn remove_edge<Q>(&mut self, index: &Q) -> Result<HashEdge<E, K, Ix, S>>
     where
         Q: ?Sized + Eq + Hash,
         EdgeId<Ix>: Borrow<Q>,
+        Ix: Clone + Ord,
     {
-        self.edges_mut()
-            .remove(index)
+        self.edges
+            .remove_entry(index)
+            .map(|(id, edge)| {
+                if self.incidence.is_stale() {
+                    self.reindex();
+                } else {
+                    self.incidence.remove(&id, edge.domain());
+                }
+                edge
+            })
             .ok_or(Error::EdgeNotFound)
             .inspect(|edge| {
                 #[cfg(feature = "tracing")]
@@ -349,11 +431,18 @@ where
         feature = "tracing",
         tracing::instrument(skip_all, level = "trace", target = "hyper_map")
     )]
-    /// removes the vertex with the given id and all of its associated hyperedges
+    /// removes the vertex with the given id and all of its associated hyperedges (the
+    /// _cascade_ deletion policy).
+    ///
+    /// The incident edges come from the incidence index (rebuilt first if stale). Dropping
+    /// them from the index sorts their `m` memberships and filters each other member's list
+    /// once, O(m log m + Σ deg(u)) over those members `u`; pruning the edge history adds one
+    /// O(h) pass.
     pub fn remove_node<Q>(&mut self, index: &Q) -> Result<Node<N, Ix>>
     where
         Q: Eq + core::fmt::Debug + Hash,
         VertexId<Ix>: Borrow<Q>,
+        Ix: Clone + Ord,
     {
         #[cfg(feature = "tracing")]
         tracing::debug!("removing the vertex {index:?} from the hypergraph...");
@@ -369,7 +458,18 @@ where
                     "successfully removed the node; removing edges that contained the vertex..."
                 );
                 // Remove all hyperedges containing this vertex
-                self.retain_edges(|_, facet| !facet.contains(index));
+                if self.incidence.is_stale() {
+                    self.reindex();
+                }
+                let ids = self.incidence.take(index);
+                let removed = ids
+                    .iter()
+                    .filter_map(|id| self.edges.remove(id))
+                    .collect::<Vec<_>>();
+                self.incidence
+                    .remove_many(&ids, removed.iter().flat_map(|edge| edge.domain()));
+                let Self { edges, history, .. } = self;
+                history.retain_edges(|id| edges.contains_key(id));
                 #[cfg(feature = "tracing")]
                 tracing::trace!(
                     "successfully removed the edges containing the removed vertex {index:?}..."
@@ -403,14 +503,24 @@ where
         tracing::instrument(skip_all, level = "trace", target = "hyper_map")
     )]
     /// retain surfaces in the hypergraph based on a predicate; the edge history is pruned to
-    /// match.
+    /// match. The predicate receives `&mut` edges and may edit their domains, so the incidence
+    /// index is rebuilt afterwards in O(I + |E| log |E|) (see [`reindex`](Self::reindex)).
     pub fn retain_edges<F>(&mut self, f: F) -> &mut Self
     where
         F: FnMut(&EdgeId<Ix>, &mut HashEdge<E, K, Ix, S>) -> bool,
+        Ix: Clone + Ord,
     {
-        let Self { edges, history, .. } = self;
+        let Self {
+            edges,
+            history,
+            incidence,
+            ..
+        } = self;
+        // stale first, so a predicate that panics midway leaves reads on the exact scan
+        incidence.invalidate();
         edges.retain(f);
         history.retain_edges(|id| edges.contains_key(id));
+        incidence.rebuild(edges);
         self
     }
     #[inline]
@@ -463,7 +573,7 @@ where
     /// if **any** of these condition are not met, an error will be thrown.
     pub(crate) fn insert_edge(&mut self, edge: HashEdge<E, K, Idx, S>) -> Result<EdgeId<Idx>>
     where
-        Idx: Clone,
+        Idx: Clone + Ord,
     {
         // check the graph to make sure the edge doesn't exist
         if self.contains_edge(edge.id()) {
@@ -551,7 +661,7 @@ where
         edge: HashEdge<E, K, Idx, S>,
     ) -> Result<EdgeId<Idx>>
     where
-        Idx: Clone,
+        Idx: Clone + Ord,
     {
         if edge.is_empty() {
             #[cfg(feature = "tracing")]
@@ -566,9 +676,32 @@ where
         #[cfg(feature = "tracing")]
         tracing::debug!("inserting a new hyperedge ({id}) into the graph...");
         // insert the new hyperedge into the adjacency map
-        self.edges_mut().insert(id.clone(), edge);
+        self.insert_indexed(edge);
         // return the id
         Ok(id)
+    }
+    /// inserts the edge under its own id and records it in the incidence index, first
+    /// rebuilding a stale index; a replaced edge with the same id is forgotten.
+    fn insert_indexed(&mut self, edge: HashEdge<E, K, Idx, S>)
+    where
+        Idx: Clone + Ord,
+    {
+        if self.incidence.is_stale() {
+            self.reindex();
+        }
+        let Self {
+            edges, incidence, ..
+        } = self;
+        let id = edge.id().clone();
+        let edge = match edges.entry(id.clone()) {
+            Entry::Occupied(mut slot) => {
+                let old = slot.insert(edge);
+                incidence.remove(&id, old.domain());
+                slot.into_mut()
+            }
+            Entry::Vacant(slot) => slot.insert(edge),
+        };
+        incidence.insert(&id, edge.domain());
     }
     /// this method is responsible for directly registering new nodes with the system,
     /// implementing additional checks to ensure the validity of the instance.

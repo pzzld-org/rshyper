@@ -118,6 +118,7 @@ mod types {
     pub use self::prelude::*;
 
     mod aliases;
+    pub(crate) mod incidence;
 
     pub(crate) mod prelude {
         #[doc(inline)]

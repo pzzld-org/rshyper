@@ -3,6 +3,7 @@
     authors: @FL03
 */
 use crate::HyperMap;
+use crate::types::incidence::Incidence;
 use core::hash::{BuildHasher, Hash};
 use rshyper::GraphProps;
 use serde::de::{Deserialize, DeserializeOwned, MapAccess, Visitor};
@@ -16,7 +17,7 @@ where
     E: DeserializeOwned,
     N: DeserializeOwned,
     S: BuildHasher + Default,
-    A::Ix: Default + Eq + Hash + DeserializeOwned,
+    A::Ix: Clone + Default + Eq + Hash + Ord + DeserializeOwned,
     A::Kind: DeserializeOwned,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -66,7 +67,7 @@ where
     E: DeserializeOwned,
     N: DeserializeOwned,
     S: BuildHasher + Default,
-    A::Ix: Default + Eq + Hash + DeserializeOwned,
+    A::Ix: Clone + Default + Eq + Hash + Ord + DeserializeOwned,
     A::Kind: DeserializeOwned,
 {
     type Value = HyperMap<N, E, A, S>;
@@ -119,11 +120,14 @@ where
         let history = position.ok_or_else(|| serde::de::Error::missing_field("history"))?;
         let nodes = nodes.ok_or_else(|| serde::de::Error::missing_field("nodes"))?;
 
-        Ok(HyperMap {
+        let mut graph = HyperMap {
             nodes,
             edges,
             history,
             attrs,
-        })
+            incidence: Incidence::default(),
+        };
+        graph.reindex();
+        Ok(graph)
     }
 }

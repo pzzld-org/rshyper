@@ -113,9 +113,11 @@ fn bench_hypermap_edges(c: &mut Criterion) {
     group.bench_with_input("remove_edge", &rand::random_range(0..N), |b, idx| {
         b.iter_batched(
             setup,
-            |graph| {
-                // get the edge with the given id
-                let _ = graph.get_edge(black_box(idx)).expect("failed to get edge");
+            |mut graph| {
+                // remove the edge with the given id
+                graph
+                    .remove_edge(black_box(idx))
+                    .expect("failed to remove edge")
             },
             BatchSize::SmallInput,
         )
@@ -153,7 +155,8 @@ fn bench_hypermap_nodes(c: &mut Criterion) {
         b.iter_batched(
             HyperMap::<Wt, Wt>::new,
             |mut graph| {
-                let _ = graph.add_nodes(black_box(0..(N as Wt)));
+                // consume the lazy iterator so the nodes are actually added
+                graph.add_nodes(black_box(0..(N as Wt))).count()
             },
             BatchSize::SmallInput,
         )
