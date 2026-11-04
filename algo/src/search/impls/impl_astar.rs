@@ -13,7 +13,7 @@ use core::hash::{BuildHasher, Hash};
 use hashbrown::HashSet;
 use rshyper_core::edge::RawEdge;
 use rshyper_core::idx::{HyperIndex, RawIndex, VertexId, VertexSet};
-use rshyper_core::{GraphProps, GraphType, HyperGraph, HyperGraphIter};
+use rshyper_core::{GraphProps, GraphType, HyperGraph, HyperGraphIter, Undirected};
 
 impl<'a, N, E, A, F, H, S, K, Idx> AStarSearch<'a, N, E, A, F, H, S>
 where
@@ -178,6 +178,34 @@ where
     }
 }
 
+/// The heap key for an f-score: for finite `f >= 0` the IEEE-754 bit pattern orders exactly
+/// like the value, so this is order-preserving with no truncation (`+ 0.0` maps `-0.0` to `0.0`).
+fn f_key(f: f64) -> i64 {
+    (f + 0.0).to_bits() as i64
+}
+
+/// the heuristic's estimate, rejected unless it is finite and non-negative
+fn checked_h(h: f64) -> Result<f64> {
+    if h.is_finite() && h >= 0.0 {
+        Ok(h)
+    } else {
+        Err(Error::InvalidHeuristic)
+    }
+}
+
+/// Shortest paths by hop count over the undirected co-member 2-section: a step goes from a
+/// vertex to any other member of an incident hyperedge and costs `1.0`; edge weights are
+/// ignored.
+///
+/// The heuristic must be *consistent* (`h(u) <= 1 + h(v)` for every step `u → v`, and
+/// `h(goal) = 0`): closed vertices are never reopened, so an inconsistent heuristic can return
+/// a longer path.
+///
+/// # Errors
+///
+/// - [`Error::UnsupportedGraphKind`] unless the graph is `Undirected` (#118).
+/// - [`Error::InvalidHeuristic`] if the heuristic returns a negative, NaN or infinite value.
+/// - [`Error::PathNotFound`] if `goal` is unreachable.
 impl<'a, N, E, F, A, H, S> PathFinder<A::Ix> for AStarSearch<'a, N, E, A, F, H, S>
 where
     A: GraphProps,
@@ -197,6 +225,11 @@ where
         if !self.graph.contains_node(&goal) {
             return Err(rshyper::Error::NodeNotFound.into());
         }
+        if core::any::TypeId::of::<A::Kind>() != core::any::TypeId::of::<Undirected>() {
+            return Err(Error::UnsupportedGraphKind(
+                core::any::type_name::<A::Kind>(),
+            ));
+        }
 
         // reset state
         self.reset();
@@ -204,7 +237,7 @@ where
         self.g_score_mut().insert(start, 0.0);
 
         // initialize f_score for start node (heuristic only since g=0)
-        let initial_fscore = self.heuristic().compute(start, goal);
+        let initial_fscore = checked_h(self.heuristic().compute(start, goal))?;
         self.f_score_mut().insert(start, initial_fscore);
         // add start node to the open set
         self.open_set_mut().insert(start);
@@ -213,7 +246,7 @@ where
         // push the start node with its f_score
         priority_queue.push(PriorityNode {
             vertex: start,
-            priority: -(initial_fscore as i64),
+            priority: f_key(initial_fscore),
         });
         // track processed nodes to avoid duplicate processing
         let mut processed = HashSet::new();
@@ -239,52 +272,50 @@ where
             self.move_open_to_closed(&current);
 
             // Get all hyperedges containing the current vertex
-            self.graph
-                .find_edges_with_node(&current)
-                .for_each(|edge_id| {
-                    // Get all vertices in this hyperedge
-                    let vertices = self
-                        .graph
-                        .get_edge_domain(edge_id)
-                        .expect("Failed to get edge vertices");
+            let graph = self.graph;
+            for edge_id in graph.find_edges_with_node(&current) {
+                // Get all vertices in this hyperedge
+                let vertices = graph
+                    .get_edge_domain(edge_id)
+                    .expect("Failed to get edge vertices");
 
-                    // Process each vertex in this hyperedge
-                    for &neighbor in vertices {
-                        // Skip if this is the current vertex or already evaluated
-                        if neighbor == current || self.has_visited(&neighbor) {
-                            continue;
-                        }
-
-                        // Cost to reach neighbor through current vertex
-                        let tentative_g_score = self.g_score[&current] + 1.0;
-
-                        // Check if this path is better than any previous path
-                        let is_better_path = !self.has_g_score(&neighbor)
-                            || tentative_g_score < self.g_score[&neighbor];
-
-                        if is_better_path {
-                            // Update path info
-                            self.came_from_mut().insert(neighbor, current);
-                            self.g_score_mut().insert(neighbor, tentative_g_score);
-
-                            // Update f_score (g_score + heuristic)
-                            let f_score =
-                                tentative_g_score + self.heuristic().compute(neighbor, goal);
-                            self.f_score_mut().insert(neighbor, f_score);
-
-                            // Add to open set if not already there
-                            if !self.in_open_set(&neighbor) {
-                                self.open_set_mut().insert(neighbor);
-                            }
-
-                            // push the neighbor into the priority queue with its f_score (negative for min-heap behavior)
-                            priority_queue.push(PriorityNode {
-                                vertex: neighbor,
-                                priority: -(f_score as i64),
-                            });
-                        }
+                // Process each vertex in this hyperedge
+                for &neighbor in vertices {
+                    // Skip if this is the current vertex or already evaluated
+                    if neighbor == current || self.has_visited(&neighbor) {
+                        continue;
                     }
-                });
+
+                    // Cost to reach neighbor through current vertex
+                    let tentative_g_score = self.g_score[&current] + 1.0;
+
+                    // Check if this path is better than any previous path
+                    let is_better_path =
+                        !self.has_g_score(&neighbor) || tentative_g_score < self.g_score[&neighbor];
+
+                    if is_better_path {
+                        // Update path info
+                        self.came_from_mut().insert(neighbor, current);
+                        self.g_score_mut().insert(neighbor, tentative_g_score);
+
+                        // Update f_score (g_score + heuristic)
+                        let f_score = tentative_g_score
+                            + checked_h(self.heuristic().compute(neighbor, goal))?;
+                        self.f_score_mut().insert(neighbor, f_score);
+
+                        // Add to open set if not already there
+                        if !self.in_open_set(&neighbor) {
+                            self.open_set_mut().insert(neighbor);
+                        }
+
+                        // `PriorityNode` is already a min-heap node, so the key is not negated
+                        priority_queue.push(PriorityNode {
+                            vertex: neighbor,
+                            priority: f_key(f_score),
+                        });
+                    }
+                }
+            }
         }
 
         // No path found

@@ -53,7 +53,7 @@ where
             return Err(Error::EmptyHyperedge);
         }
         // fetch the next edge index
-        let id = self.next_edge_id();
+        let id = self.next_edge_id()?;
         // create a new surface
         let surface = HyperEdge::from_parts(id.clone(), verts, weight);
         // add the hyperedge to the graph
@@ -62,32 +62,33 @@ where
     /// add a new node with the given weight and return its index
     pub fn add_node(&mut self, Weight(weight): Weight<N>) -> Result<VertexId<Ix>>
     where
-        Ix: AddStep<Output = Ix> + Copy,
+        Ix: AddStep<Output = Ix> + Copy + PartialOrd,
     {
         // generate a new index to identify the new node
-        let ndx = self.next_vertex_id();
+        let ndx = self.next_vertex_id()?;
         // initialize a new node with the given weight & index
         let node = Node::new(ndx, weight);
         // insert the new node into the vertices map
         self.insert_node_unchecked(node)
     }
-    /// given a set of weights, insert a new node into the graph for each and return its id as
-    /// an iterator of [`VertexId`]
-    pub fn add_nodes<I>(&mut self, weights: I) -> impl Iterator<Item = VertexId<Ix>>
+    /// given a set of weights, insert a new node into the graph for each and return the result
+    /// of each insertion, in order; see [`add_node`](Self::add_node). Nodes are added lazily as
+    /// the iterator is consumed, so a failed allocation is reported, never silently dropped.
+    pub fn add_nodes<I>(&mut self, weights: I) -> impl Iterator<Item = Result<VertexId<Ix>>>
     where
         I: IntoIterator<Item = N>,
-        Ix: AddStep<Output = Ix> + Copy,
+        Ix: AddStep<Output = Ix> + Copy + PartialOrd,
     {
         weights
             .into_iter()
-            .filter_map(|weight| self.add_node(Weight(weight)).ok())
+            .map(|weight| self.add_node(Weight(weight)))
     }
     /// add a new hypernode using the logical [`Default`] for the weight of type `N` and
     /// return its index.
     pub fn add_vertex(&mut self) -> Result<VertexId<Ix>>
     where
         N: Default,
-        Ix: AddStep<Output = Ix> + Copy,
+        Ix: AddStep<Output = Ix> + Copy + PartialOrd,
     {
         self.add_node(Default::default())
     }
@@ -229,7 +230,7 @@ where
     {
         self.get_edge_mut(index).map(|edge| edge.domain_mut())
     }
-    /// returns an immutable reference to the [`HashFacet`] associated with the given index
+    /// returns an immutable reference to the [`HashEdge`] associated with the given index
     pub fn get_edge<Q>(&self, index: &Q) -> Result<&HashEdge<E, K, Ix, S>>
     where
         Q: ?Sized + Eq + Hash,
@@ -237,7 +238,7 @@ where
     {
         self.edges().get(index).ok_or_else(Error::edge_not_found)
     }
-    /// returns a mutable reference to the [`HashFacet`] associated with the given index
+    /// returns a mutable reference to the [`HashEdge`] associated with the given index
     pub fn get_edge_mut<Q>(&mut self, index: &Q) -> Result<&mut HashEdge<E, K, Ix, S>>
     where
         Q: ?Sized + Eq + Hash,
@@ -367,6 +368,8 @@ where
         if !self.contains_edge(e1) || !self.contains_edge(e2) {
             return Err(Error::EdgeNotFound);
         }
+        // allocate first: a failed allocation must not lose either operand
+        let edge_id = self.next_edge_id()?;
         // try and remove the two edges from the hypergraph
         let s1 = self.remove_edge(e1)?;
         let s2 = self.remove_edge(e2)?;
@@ -378,8 +381,6 @@ where
             .collect::<VertexSet<Ix, S>>();
         // merge the two weights using the provided function
         let weight = f(*s1.weight().view(), *s2.weight().view());
-        // generate a new edge index
-        let edge_id = self.next_edge_id();
         // initialize a new facet using the merged vertices, new index, and source weight
         let surface = HyperEdge::from_parts(edge_id, vertices, Weight(weight));
         // insert the new hyperedge into the surfaces map

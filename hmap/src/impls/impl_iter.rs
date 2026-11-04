@@ -40,7 +40,7 @@ where
     /// consisting of:
     ///
     /// - `0`: a reference to the [`EdgeId`](rshyper::EdgeId)
-    /// - `1`: a reference to the corresponding [`Edge`](rshyper::Edge).
+    /// - `1`: a reference to the corresponding [`Edge`](rshyper::HyperEdge).
     pub fn iter_edges(&self) -> EdgeIter<'_, E, K, Idx, S> {
         EdgeIter {
             iter: self.edges().iter(),
@@ -50,7 +50,7 @@ where
     /// consisting of:
     ///
     ///  - `0`: a reference to the [`EdgeId`](rshyper::EdgeId)
-    ///  - `1`: a mutable reference to the corresponding [`Edge`](rshyper::Edge).
+    ///  - `1`: a mutable reference to the corresponding [`Edge`](rshyper::HyperEdge).
     pub fn iter_edges_mut(&mut self) -> EdgeIterMut<'_, E, K, Idx, S> {
         EdgeIterMut {
             iter: self.edges_mut().iter_mut(),
@@ -63,13 +63,13 @@ where
             iter: self.edges().keys(),
         }
     }
-    /// returns an iterator over each of the [`Edge`](rshyper::Edge) values within the graph.
+    /// returns an iterator over each of the [`Edge`](rshyper::HyperEdge) values within the graph.
     pub fn facets(&self) -> EdgeValues<'_, E, K, Idx, S> {
         EdgeValues {
             iter: self.edges().values(),
         }
     }
-    /// returns a mutable iterator over each of the [`Edge`](rshyper::Edge) values within the
+    /// returns a mutable iterator over each of the [`Edge`](rshyper::HyperEdge) values within the
     /// graph.
     pub fn facets_mut(&mut self) -> EdgeValuesMut<'_, E, K, Idx, S> {
         EdgeValuesMut {
@@ -152,7 +152,7 @@ where
     Idx: HashIndex,
 {
     /// returns a parallel iterator over the surfaces of the hypergraph, yielding pairs of
-    /// [`EdgeId`](rshyper::EdgeId) and the corresponding [`Edge`](rshyper::Edge).
+    /// [`EdgeId`](rshyper::EdgeId) and the corresponding [`Edge`](rshyper::HyperEdge).
     pub fn par_iter_facets(&self) -> ParEdgeValues<'_, E, K, Idx, S>
     where
         E: Send + Sync,
@@ -165,7 +165,7 @@ where
         }
     }
     /// returns a mutable parallel iterator over the surfaces of the hypergraph, yielding pairs of
-    /// [`EdgeId`](rshyper::EdgeId) and a mutable reference to the corresponding [`Edge`](rshyper::Edge).
+    /// [`EdgeId`](rshyper::EdgeId) and a mutable reference to the corresponding [`Edge`](rshyper::HyperEdge).
     pub fn par_iter_facets_mut(&mut self) -> ParEdgeValuesMut<'_, E, K, Idx, S>
     where
         E: Send + Sync,

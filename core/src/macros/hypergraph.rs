@@ -4,55 +4,16 @@
 */
 #![cfg(feature = "macros")]
 
-/// the [`hypergraph`] macro works to aide the in the creation of hypergraphs by allowing
-/// users to define nodes and edges in a hypergraph in a more declarative way.
+/// the [`hypergraph`](crate::hypergraph) macro works to aide the in the creation of
+/// hypergraphs by allowing users to define nodes and edges in a hypergraph in a more
+/// declarative way.
 ///
 /// ## Example
 ///
-/// ### Basic Usage
+/// Runnable examples require a concrete hypergraph, such as the `HyperMap`, and are
+/// maintained within the [`rshyper` crate docs][rshyper-macros].
 ///
-/// The `hypergraph` macro allows you to define nodes and edges in a hypergraph
-///
-/// ```rust
-/// use rshyper::{hypergraph, UnHyperMap};
-/// // initialize a new undirected hypergraph
-/// let mut graph = UnHyperMap::<usize, usize>::undirected();
-/// // use the macro to insert nodes and edges into the graph
-/// hypergraph! {
-///     graph {
-///         nodes: {
-///             let v0;
-///             let v1;
-///             let v2 = 10;
-///         };
-///         edges: {
-///             let e0: [v0, v1];
-///             let e1: [v0, v1, v2] = 10;
-///         };
-///     }
-/// }
-/// ```
-///
-/// or
-///
-/// ```rust
-/// use rshyper::{hypergraph, UnHyperMap};
-///
-/// // use the macro to initialize a new hypergraph, then insert nodes and edges
-/// hypergraph! {
-///     let mut graph: UnHyperMap::<usize, usize> {
-///         nodes: {
-///             let v0;
-///             let v1 = 1;
-///             let v2;
-///         };
-///         edges: {
-///             let e0: [v0, v1];
-///             let e1: [v0, v2];
-///             let e2: [v0, v1, v2] = 10;
-///         };
-///     }
-/// }
+/// [rshyper-macros]: https://docs.rs/rshyper/latest/rshyper/#example-2-macros
 #[macro_export]
 macro_rules! hypergraph {
     (
@@ -101,33 +62,10 @@ macro_rules! hypergraph {
 ///
 /// ## Basic Usage
 ///
-/// ```rust
-/// use rshyper::{HyperMap, IntoWeight};
+/// Runnable examples require a concrete hypergraph, such as the `HyperMap`, and are
+/// maintained within the [`rshyper` crate docs][rshyper-macros].
 ///
-/// fn main() -> rshyper::Result<()> {
-///     // initialize a new undirected hypergraph
-///     let mut graph = HyperMap::<usize, usize>::undirected();
-///     // add some vertices
-///     let v0 = graph.add_node(1.into_weight())?;
-///     let v1 = graph.add_node(2.into_weight())?;
-///     let v2 = graph.add_node(3.into_weight())?;
-///     // use the macro to insert edges into the graph
-///     rshyper::hyperedge! {
-///         graph {
-///             let e0: [v0, v1];
-///             let e1: [v0, v1, v2] = 10;
-///         }
-///     }
-///     // verify the order of the edges
-///     assert_eq!(graph.get_edge_order(&e0)?, 2);
-///     assert_eq!(graph.get_edge_order(&e1)?, 3);
-///     // verify the weights of the edges
-///     assert_eq!(graph.get_edge_weight(&e0)?, &<usize>::default());
-///     assert_eq!(graph.get_edge_weight(&e1)?, &10);
-///     // finish
-///     Ok(())
-/// }
-/// ```
+/// [rshyper-macros]: https://docs.rs/rshyper/latest/rshyper/#example-2-macros
 #[macro_export]
 macro_rules! hyperedge {
     ($src:ident { $(let $edge:ident: [$($var:ident),*] $(= $w:expr)?);* $(;)? }) => {
@@ -145,7 +83,8 @@ macro_rules! hyperedge {
         let $edge = $src.add_edge([$($var),*], $crate::Weight($w)).expect("Failed to insert edge");
     };
 }
-/// the [`hypernode`] macro streamlines the process of inserting nodes into a hypergraph.
+/// the [`hypernode`](crate::hypernode) macro streamlines the process of inserting nodes into a
+/// hypergraph.
 ///
 /// ## Usage
 ///
@@ -164,22 +103,10 @@ macro_rules! hyperedge {
 ///
 /// ### Example
 ///
-/// ```rust
-/// use rshyper::HyperMap;
-/// // initialize a new, undirected hypergraph
-/// let mut graph = HyperMap::<usize, usize>::undirected();
-/// // use the macro to insert nodes into the graph
-/// rshyper::hypernode! {
-///     graph {
-///         let v0;
-///         let v1;
-///         let v2;
-///         let v3 = 1;
-///         let v4 = 2;
-///         let v5 = 3;
-///     }
-///  }
-/// ```
+/// Runnable examples require a concrete hypergraph, such as the `HyperMap`, and are
+/// maintained within the [`rshyper` crate docs][rshyper-macros].
+///
+/// [rshyper-macros]: https://docs.rs/rshyper/latest/rshyper/#example-2-macros
 #[macro_export]
 macro_rules! hypernode {
     ($src:ident { $(let $var:ident $(= $w:expr)?);* $(;)? }) => {

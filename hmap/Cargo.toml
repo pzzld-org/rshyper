@@ -33,6 +33,11 @@ test = true
 
 [[bench]]
 harness = false
+name = "walks"
+required-features = ["algo", "std"]
+
+[[bench]]
+harness = false
 name = "algo"
 required-features = [
   "algo",

@@ -70,7 +70,7 @@ pub trait RawPoint {
 
     private!();
 }
-/// [`Point`] is a trait that extends the [`RawPoint`] trait to provide additional
+/// [`HyperPoint`] is a trait that extends the [`RawPoint`] trait to provide additional
 /// functionality for points in a hypergraph, such as accessing the index and raw index.
 pub trait HyperPoint: RawPoint {
     /// returns the index of the point as a [`VertexId`].

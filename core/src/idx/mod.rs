@@ -171,4 +171,63 @@ mod tests {
         assert_eq!(history.nodes(), &[v0, v1, v2]);
         Ok(())
     }
+
+    #[test]
+    fn test_tracker_sees_raw_history_edits() {
+        let mut history = IndexTracker::<usize>::zero();
+        history.next_vertex().unwrap();
+        history.next_vertex().unwrap();
+        // an id pushed past the cursor through the raw accessor must still be rejected
+        history.nodes_mut().push(VertexId::new(4));
+        assert_eq!(history.next_vertex().unwrap(), 2);
+        assert_eq!(history.next_vertex().unwrap(), 3);
+        let before = history.clone();
+        assert!(matches!(
+            history.next_vertex(),
+            Err(IndexError::DuplicateIndex)
+        ));
+        assert_eq!(history.nodes(), before.nodes());
+        assert_eq!(history.cursor(), before.cursor());
+        // so must one added by `add_node` or `with_nodes`
+        let mut history = IndexTracker::<usize>::zero().with_nodes(alloc::vec![VertexId::new(0)]);
+        assert!(matches!(
+            history.next_vertex(),
+            Err(IndexError::DuplicateIndex)
+        ));
+        history.nodes_mut().clear();
+        history.add_node(VertexId::new(0));
+        assert!(matches!(
+            history.next_vertex(),
+            Err(IndexError::DuplicateIndex)
+        ));
+        // `clear` resets both the history and the cursor
+        history.clear();
+        assert_eq!(history.next_vertex().unwrap(), 0);
+    }
+
+    /// from #128: a history may hold an id twice; retaining away one copy must keep it reserved
+    #[test]
+    fn test_tracker_rejects_ids_kept_after_partial_retain() -> crate::Result<()> {
+        let mut history = IndexTracker::<usize>::zero();
+        let e0 = history.next_edge()?;
+        history.add_edge(e0);
+        // drop only one of the two copies of `e0`
+        let mut seen = false;
+        history.retain_edges(|_| !core::mem::replace(&mut seen, true));
+        assert_eq!(history.edges(), &[e0]);
+        history.set_cursor(IndexFrame::zero());
+        assert!(matches!(
+            history.next_edge(),
+            Err(IndexError::DuplicateIndex)
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn test_step_overflow_is_an_error() {
+        let mut id = VertexId::new(u8::MAX - 1);
+        assert_eq!(id.step().unwrap(), u8::MAX - 1);
+        assert!(matches!(id.step(), Err(IndexError::IndexOutOfBounds)));
+        assert_eq!(id.get(), &u8::MAX);
+    }
 }
