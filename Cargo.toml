@@ -30,14 +30,14 @@ license = "Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/FL03/rshyper.git"
 rust-version = "1.85.0"
-version = "0.1.10"
+version = "0.2.0"
 
 [workspace.dependencies]
 # local
-rshyper = { default-features = false, path = "rshyper", version = "0.1.10" }
-rshyper-algo = { default-features = false, path = "algo", version = "0.1.10" }
-rshyper-core = { default-features = false, path = "core", version = "0.1.10" }
-rshyper-hmap = { default-features = false, path = "hmap", version = "0.1.10" }
+rshyper = { default-features = false, path = "rshyper", version = "0.2.0" }
+rshyper-algo = { default-features = false, path = "algo", version = "0.2.0" }
+rshyper-core = { default-features = false, path = "core", version = "0.2.0" }
+rshyper-hmap = { default-features = false, path = "hmap", version = "0.2.0" }
 # custom
 contained = { default-features = false, features = ["macros"], version = "0.2.3" }
 # benchmarking

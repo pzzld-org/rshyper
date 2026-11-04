@@ -19,7 +19,7 @@
       in rec {
         packages.default = pkgs.rustPlatform.buildRustPackage {
           pname = "rshyper";
-          version = "0.1.10";
+          version = "0.2.0";
           src = self; # ./.;
           cargoLock = {
             lockFile = ./Cargo.lock;

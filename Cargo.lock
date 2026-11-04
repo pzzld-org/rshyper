@@ -790,7 +790,7 @@ checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
 
 [[package]]
 name = "rshyper"
-version = "0.1.10"
+version = "0.2.0"
 dependencies = [
  "rand 0.9.2",
  "rshyper-algo",
@@ -802,7 +802,7 @@ dependencies = [
 
 [[package]]
 name = "rshyper-algo"
-version = "0.1.10"
+version = "0.2.0"
 dependencies = [
  "hashbrown 0.16.1",
  "num-traits",
@@ -819,7 +819,7 @@ dependencies = [
 
 [[package]]
 name = "rshyper-core"
-version = "0.1.10"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "contained",
@@ -842,7 +842,7 @@ dependencies = [
 
 [[package]]
 name = "rshyper-hmap"
-version = "0.1.10"
+version = "0.2.0"
 dependencies = [
  "criterion",
  "getrandom",

@@ -3,7 +3,7 @@
 [![crates.io](https://img.shields.io/crates/v/rshyper?style=for-the-badge&logo=rust)](https://crates.io/crates/rshyper)
 [![docs.rs](https://img.shields.io/docsrs/rshyper?style=for-the-badge)](https://docs.rs/rshyper)
 
-**A general-purpose Rust hypergraph framework, under active development.** The published version is [v0.1.9](https://github.com/pzzld-org/rshyper/releases/tag/v0.1.9). The [v0.2.0 draft PR](https://github.com/pzzld-org/rshyper/pull/100) is not yet qualified or released; it originally declares 0.1.10 in its manifest, pending compatibility/version review.
+**A general-purpose Rust hypergraph framework, under active development.** The published version is [v0.2.0](https://github.com/pzzld-org/rshyper/releases/tag/v0.2.0).
 
 ## Workspace
 
@@ -22,10 +22,10 @@ For the released crate:
 
 ```toml
 [dependencies]
-rshyper = { version = "0.1.9", features = ["hyper_map", "macros"] }
+rshyper = { version = "0.2.0", features = ["hyper_map", "macros"] }
 ```
 
-See the [examples directory](rshyper/examples) and [QUICKSTART.md](QUICKSTART.md). The previous README's inline macro example was stale against the published API; the next sprint must restore a compiled and CI-checked usage example before release. APIs may change in the draft patch.
+See the [examples directory](rshyper/examples), the [crate documentation](https://docs.rs/rshyper), whose examples compile as doctests, and [QUICKSTART.md](QUICKSTART.md). The API is pre-1.0 and may change between minor versions.
 
 ## Development
 
