@@ -217,3 +217,51 @@ fn test_astar_complex_paths() -> Result<()> {
 
     Ok(())
 }
+
+/// #122: with h(2) = 1 (consistent), A* used to return the 5-hop path through 2.
+#[test]
+fn test_astar_consistent_heuristic_returns_shortest() -> Result<()> {
+    let mut graph = HyperMap::<(), ()>::undirected();
+    let v: Vec<VertexId> = (0..7).map(|_| graph.add_vertex().unwrap()).collect();
+    for [a, b] in [[0, 1], [1, 5], [0, 2], [2, 3], [3, 4], [4, 5], [5, 6]] {
+        graph.add_link([v[a], v[b]])?;
+    }
+    let h = |x: VertexId, _: VertexId| if *x.get() == 2 { 1.0 } else { 0.0 };
+    assert_eq!(
+        graph.astar(h).find_path(v[0], v[6])?,
+        [v[0], v[1], v[5], v[6]]
+    );
+    Ok(())
+}
+
+/// #122 (P-10): an invalid heuristic value is an error, not a negation-overflow panic.
+#[test]
+fn test_astar_rejects_invalid_heuristics() -> Result<()> {
+    use rshyper_algo::Error;
+    let mut graph = HyperMap::<(), ()>::undirected();
+    let [s, a, t] = [(); 3].map(|_| graph.add_vertex().unwrap());
+    graph.add_link([s, a])?;
+    graph.add_link([a, t])?;
+    for bad in [f64::NEG_INFINITY, f64::INFINITY, f64::NAN, -1.0] {
+        let h = move |x: VertexId, _: VertexId| if x == a { bad } else { 0.0 };
+        assert!(matches!(
+            graph.astar(h).find_path(s, t),
+            Err(Error::InvalidHeuristic)
+        ));
+    }
+    Ok(())
+}
+
+/// #122: directed graphs are rejected until ADR-DIR (#118) defines their semantics.
+#[test]
+fn test_astar_rejects_directed_graphs() -> Result<()> {
+    use rshyper_algo::Error;
+    let mut graph = rshyper_hmap::DiHyperMap::<(), ()>::directed();
+    let [s, t] = [(); 2].map(|_| graph.add_vertex().unwrap());
+    graph.add_link([s, t])?;
+    assert!(matches!(
+        graph.astar(|_, _| 0.0).find_path(s, t),
+        Err(Error::UnsupportedGraphKind(_))
+    ));
+    Ok(())
+}
