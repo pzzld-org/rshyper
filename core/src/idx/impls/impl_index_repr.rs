@@ -46,7 +46,7 @@ where
     /// the [`IndexBase`] is not generalized, automatically using random number generation
     /// if the `rand` feature is enabled, or an atomic counter otherwise. The method is also
     /// useful in that it generates [`usize`] indices, whcih are the most common instances, yet
-    /// aren't direct implementors of [`StandardUniform`](rand_distr::StandardUniform).
+    /// aren't direct implementors of [`StandardUniform`](https://docs.rs/rand/latest/rand/distr/struct.StandardUniform.html).
     pub fn generate(&mut self) -> Self {
         // declare the prev param
         let prev: usize;

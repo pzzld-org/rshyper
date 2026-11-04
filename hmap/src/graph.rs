@@ -137,7 +137,7 @@ where
     pub const fn history_mut(&mut self) -> &mut IndexTracker<Ix> {
         &mut self.history
     }
-    /// returns a copy of the position of the hypergraph; here, the [`position`](Position) is
+    /// returns a copy of the position of the hypergraph; here, the [`position`](idx::IndexFrame) is
     /// used to track the indices (edge & vertex) and define which ones are next to be used
     /// when inserting new hyperedges or vertices
     pub const fn position(&self) -> &idx::IndexFrame<Ix> {

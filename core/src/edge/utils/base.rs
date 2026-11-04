@@ -5,7 +5,7 @@
 use crate::edge::{HyperEdge, Link};
 use crate::{GraphType, RawDomain, RawIndex, VertexId};
 
-/// returns a new [`Edge`] from the given iterator of vertex ids
+/// returns a new [`HyperEdge`] from the given iterator of vertex ids
 pub fn edge<I, T, S, K, Idx>(iter: I) -> HyperEdge<T, S, K, Idx>
 where
     I: IntoIterator<Item = S::Key>,
