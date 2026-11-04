@@ -5,42 +5,14 @@
 //! RED witnesses for known `rshyper-hmap` invariant defects (#104 ordered iterators,
 //! #105 invariant-safe mutations). Each test asserts the CORRECT behaviour and is expected to
 //! fail on the current code; it should pass once the defect is fixed.
-use core::hash::{BuildHasher, Hasher};
+mod common;
+
+use common::RevBuild;
 use rshyper_core::idx::{EdgeId, VertexId};
 use rshyper_core::{Result, Weight};
 use rshyper_hmap::UnHyperMap;
 
 type Graph = UnHyperMap<usize, usize, usize, RevBuild>;
-
-/// deterministic hasher: hashbrown buckets by low hash bits, so the raw iteration order of the
-/// maps becomes the reverse of the id order, exposing any reliance on the raw order.
-#[derive(Clone, Copy, Default)]
-struct RevBuild;
-
-#[derive(Default)]
-struct RevHasher(u64);
-
-impl Hasher for RevHasher {
-    fn write(&mut self, bytes: &[u8]) {
-        for &b in bytes {
-            self.0 = self.0.wrapping_mul(31).wrapping_add(u64::from(b));
-        }
-    }
-    fn write_usize(&mut self, n: usize) {
-        self.0 = n as u64;
-    }
-    fn finish(&self) -> u64 {
-        !self.0
-    }
-}
-
-impl BuildHasher for RevBuild {
-    type Hasher = RevHasher;
-
-    fn build_hasher(&self) -> RevHasher {
-        RevHasher::default()
-    }
-}
 
 fn raw_node_ids(g: &Graph) -> Vec<VertexId<usize>> {
     g.iter_nodes().map(|(id, _)| *id).collect()
@@ -359,6 +331,11 @@ fn rewound_cursor_allocation_is_error_atomic() -> Result<()> {
     assert!(matches!(
         g.add_link([a, b]),
         Err(Error::IndexError(IndexError::DuplicateIndex))
+    ));
+    // from #128: the batch insert reports the failure instead of dropping the weight
+    assert!(matches!(
+        g.add_nodes([0]).collect::<Vec<_>>().as_slice(),
+        [Err(Error::IndexError(IndexError::DuplicateIndex))]
     ));
     let after = (g.order(), g.size(), g.history().clone(), *g.position());
     assert_eq!(before, after);

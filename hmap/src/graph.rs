@@ -2,6 +2,7 @@
     Appellation: hyper_map <module>
     Contrib: @FL03
 */
+use crate::types::incidence::Incidence;
 use crate::types::prelude::*;
 
 use core::borrow::Borrow;
@@ -44,6 +45,9 @@ where
     /// tracks the current position of the hypergraph, which is used to determine the next
     /// available indices for edges and vertices.
     pub(crate) history: IndexTracker<A::Ix>,
+    /// for each vertex, the ascending ids of the edges containing it; marked stale whenever
+    /// `&mut` access to the edge map is handed out
+    pub(crate) incidence: Incidence<A::Ix, S>,
 }
 
 impl<N, E, A, K, Ix, S> HyperMap<N, E, A, S>
@@ -65,6 +69,7 @@ where
             nodes: NodeMap::default(),
             attrs: A::new(),
             history: Default::default(),
+            incidence: Incidence::default(),
         }
     }
     /// creates a new instance of the hypergraph with the given capacity for edges and nodes
@@ -78,6 +83,7 @@ where
             nodes: NodeMap::with_capacity_and_hasher(nodes, Default::default()),
             attrs: A::new(),
             history: Default::default(),
+            incidence: Incidence::with_capacity_and_hasher(nodes, Default::default()),
         }
     }
     #[doc(hidden)]
@@ -90,9 +96,10 @@ where
     {
         HyperMap {
             edges: EdgeMap::with_capacity_and_hasher(edges, hash_builder.clone()),
-            nodes: NodeMap::with_capacity_and_hasher(nodes, hash_builder),
+            nodes: NodeMap::with_capacity_and_hasher(nodes, hash_builder.clone()),
             attrs: A::new(),
             history: Default::default(),
+            incidence: Incidence::with_capacity_and_hasher(nodes, hash_builder),
         }
     }
     #[doc(hidden)]
@@ -104,9 +111,10 @@ where
     {
         HyperMap {
             edges: EdgeMap::with_hasher(hash_builder.clone()),
-            nodes: NodeMap::with_hasher(hash_builder),
+            nodes: NodeMap::with_hasher(hash_builder.clone()),
             attrs: A::new(),
             history: Default::default(),
+            incidence: Incidence::with_hasher(hash_builder),
         }
     }
     #[doc(hidden)]
@@ -152,14 +160,22 @@ where
     pub const fn edges(&self) -> &EdgeMap<E, K, Ix, S> {
         &self.edges
     }
-    /// returns a mutable reference to the surfaces of the hypergraph
+    /// returns a mutable reference to the surfaces of the hypergraph.
+    ///
+    /// This is an escape hatch: it marks the incidence index stale, so incidence reads scan
+    /// every edge until [`reindex`](Self::reindex) or the next checked edge mutation. Every
+    /// other `&mut` edge accessor (`get_edge_mut`, `get_domain_mut`, [`edge`](Self::edge),
+    /// `iter_edges_mut`, `facets_mut`, `IndexMut`, ...) goes through this method.
     pub const fn edges_mut(&mut self) -> &mut EdgeMap<E, K, Ix, S> {
+        self.incidence.invalidate();
         &mut self.edges
     }
     #[inline]
-    /// overrides the current surfaces and returns a mutable reference to the hypergraph
+    /// overrides the current surfaces and returns a mutable reference to the hypergraph; like
+    /// [`edges_mut`](Self::edges_mut), this marks the incidence index stale.
     pub fn set_edges(&mut self, edges: EdgeMap<E, K, Ix, S>) -> &mut Self {
         self.edges = edges;
+        self.incidence.invalidate();
         self
     }
     /// overrides the current nodes and returns a mutable reference to the hypergraph
@@ -220,6 +236,12 @@ where
             return surface.contains(vertex);
         }
         false
+    }
+    #[doc(hidden)]
+    /// returns true while the incidence index is stale, i.e. after an `&mut` edge accessor
+    /// and before [`reindex`](Self::reindex) or the next checked edge mutation.
+    pub const fn is_incidence_stale(&self) -> bool {
+        self.incidence.is_stale()
     }
     /// returns true if the hypergraph is empty, meaning it has no edges nor any nodes.
     pub fn is_empty(&self) -> bool {
