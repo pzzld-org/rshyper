@@ -71,16 +71,16 @@ where
         // insert the new node into the vertices map
         self.insert_node_unchecked(node)
     }
-    /// given a set of weights, insert a new node into the graph for each and return its id as
-    /// an iterator of [`VertexId`]
-    pub fn add_nodes<I>(&mut self, weights: I) -> impl Iterator<Item = VertexId<Ix>>
+    /// given a set of weights, insert a new node into the graph for each and return the result
+    /// of each insertion, in order, as an iterator; see [`add_node`](Self::add_node)
+    pub fn add_nodes<I>(&mut self, weights: I) -> impl Iterator<Item = Result<VertexId<Ix>>>
     where
         I: IntoIterator<Item = N>,
         Ix: AddStep<Output = Ix> + Copy + Ord,
     {
         weights
             .into_iter()
-            .filter_map(|weight| self.add_node(Weight(weight)).ok())
+            .map(|weight| self.add_node(Weight(weight)))
     }
     /// add a new hypernode using the logical [`Default`] for the weight of type `N` and
     /// return its index.

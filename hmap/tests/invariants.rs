@@ -359,6 +359,11 @@ fn rewound_allocation_is_error_atomic() -> Result<()> {
         g.add_edge([v0, v1], Weight(0)),
         Err(Error::IndexError(IndexError::DuplicateIndex))
     ));
+    // the batch insert must report the failure rather than silently dropping the weight
+    assert!(matches!(
+        g.add_nodes([0]).collect::<Vec<_>>().as_slice(),
+        [Err(Error::IndexError(IndexError::DuplicateIndex))]
+    ));
     assert_eq!(g.order(), order);
     assert_eq!(g.size(), size);
     assert_eq!(g.history().nodes(), &nodes);
