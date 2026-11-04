@@ -169,12 +169,21 @@ where
     ///     assert_eq!(e1.get(), &1);
     ///     assert_eq!(e2.get(), &2);
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// [`IndexError::IndexOutOfBounds`] when the next value would overflow `T`; the index is
+    /// left unchanged.
     #[inline]
     pub fn step(&mut self) -> Result<Self, IndexError>
     where
         T: AddStep<Output = T>,
     {
-        let prev = self.get_mut().add_step();
+        let next = self
+            .get()
+            .checked_step()
+            .ok_or(IndexError::IndexOutOfBounds)?;
+        let prev = core::mem::replace(self.get_mut(), next);
         Ok(IndexBase {
             value: prev,
             _type: core::marker::PhantomData::<K>,

@@ -337,3 +337,84 @@ fn seq_iter_skips_dangling_history_ids() -> Result<()> {
     assert_eq!(g.seq_iter_facets().count(), g.size());
     Ok(())
 }
+
+/// #114: rewinding the cursor onto live ids makes allocation fail with `DuplicateIndex`
+/// instead of panicking, and the failed call changes nothing.
+#[test]
+fn rewound_cursor_allocation_is_error_atomic() -> Result<()> {
+    use rshyper_core::Error;
+    use rshyper_core::idx::{IndexError, IndexFrame};
+
+    let mut g = Graph::undirected();
+    let a = g.add_vertex()?;
+    let b = g.add_vertex()?;
+    g.add_link([a, b])?;
+    g.set_position(IndexFrame::zero());
+
+    let before = (g.order(), g.size(), g.history().clone(), *g.position());
+    assert!(matches!(
+        g.add_vertex(),
+        Err(Error::IndexError(IndexError::DuplicateIndex))
+    ));
+    assert!(matches!(
+        g.add_link([a, b]),
+        Err(Error::IndexError(IndexError::DuplicateIndex))
+    ));
+    let after = (g.order(), g.size(), g.history().clone(), *g.position());
+    assert_eq!(before, after);
+    assert_eq!(before.2.nodes(), after.2.nodes());
+    assert_eq!(before.2.edges(), after.2.edges());
+    Ok(())
+}
+
+/// #114: a full `u8` index space is an error, never a panic or a wrap that reissues id 0.
+/// Passes under both `cargo test` (overflow checks on) and `cargo test -r` (off).
+#[test]
+fn exhausted_index_space_is_an_error_and_never_reuses_ids() -> Result<()> {
+    use rshyper_core::Error;
+    use rshyper_core::idx::IndexError;
+
+    let mut g = UnHyperMap::<(), (), u8>::undirected();
+    for i in 0..u8::MAX {
+        assert_eq!(*g.add_vertex()?.get(), i);
+    }
+    let position = *g.position();
+    assert!(matches!(
+        g.add_vertex(),
+        Err(Error::IndexError(IndexError::IndexOutOfBounds))
+    ));
+    assert_eq!(*g.position(), position);
+    // freeing an id must not make it allocatable again
+    g.remove_node(&VertexId::from(0u8))?;
+    assert!(matches!(
+        g.add_vertex(),
+        Err(Error::IndexError(IndexError::IndexOutOfBounds))
+    ));
+    assert_eq!(g.order(), usize::from(u8::MAX) - 1);
+    Ok(())
+}
+
+/// #114: a merge whose new id cannot be allocated keeps both operands.
+#[test]
+fn merge_with_failed_allocation_keeps_both_edges() -> Result<()> {
+    use rshyper_core::Error;
+    use rshyper_core::idx::{IndexError, IndexFrame};
+
+    let mut g = Graph::undirected();
+    let v = [g.add_vertex()?, g.add_vertex()?, g.add_vertex()?];
+    let x = g.add_link([v[0], v[1]])?;
+    let y = g.add_link([v[1], v[2]])?;
+    let z = g.add_link([v[0], v[2]])?;
+    // put the edge cursor on a live edge (z), then on an operand (x)
+    for live in [z, x] {
+        g.set_position(IndexFrame::new(live, VertexId::from(3usize)));
+        assert!(matches!(
+            g.merge_edges(&x, &y),
+            Err(Error::IndexError(IndexError::DuplicateIndex))
+        ));
+        assert_eq!(g.size(), 3);
+        assert!(g.contains_edge(&x) && g.contains_edge(&y) && g.contains_edge(&z));
+        assert_eq!(g.history().edges(), &[x, y, z]);
+    }
+    Ok(())
+}

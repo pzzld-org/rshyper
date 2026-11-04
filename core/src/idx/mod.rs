@@ -171,4 +171,45 @@ mod tests {
         assert_eq!(history.nodes(), &[v0, v1, v2]);
         Ok(())
     }
+
+    #[test]
+    fn test_tracker_sees_raw_history_edits() {
+        let mut history = IndexTracker::<usize>::zero();
+        history.next_vertex().unwrap();
+        history.next_vertex().unwrap();
+        // an id pushed past the cursor through the raw accessor must still be rejected
+        history.nodes_mut().push(VertexId::new(4));
+        assert_eq!(history.next_vertex().unwrap(), 2);
+        assert_eq!(history.next_vertex().unwrap(), 3);
+        let before = history.clone();
+        assert!(matches!(
+            history.next_vertex(),
+            Err(IndexError::DuplicateIndex)
+        ));
+        assert_eq!(history.nodes(), before.nodes());
+        assert_eq!(history.cursor(), before.cursor());
+        // so must one added by `add_node` or `with_nodes`
+        let mut history = IndexTracker::<usize>::zero().with_nodes(alloc::vec![VertexId::new(0)]);
+        assert!(matches!(
+            history.next_vertex(),
+            Err(IndexError::DuplicateIndex)
+        ));
+        history.nodes_mut().clear();
+        history.add_node(VertexId::new(0));
+        assert!(matches!(
+            history.next_vertex(),
+            Err(IndexError::DuplicateIndex)
+        ));
+        // `clear` resets both the history and the cursor
+        history.clear();
+        assert_eq!(history.next_vertex().unwrap(), 0);
+    }
+
+    #[test]
+    fn test_step_overflow_is_an_error() {
+        let mut id = VertexId::new(u8::MAX - 1);
+        assert_eq!(id.step().unwrap(), u8::MAX - 1);
+        assert!(matches!(id.step(), Err(IndexError::IndexOutOfBounds)));
+        assert_eq!(id.get(), &u8::MAX);
+    }
 }
