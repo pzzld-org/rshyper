@@ -75,7 +75,6 @@
     clippy::should_implement_trait
 )]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(feature = "nightly", feature(allocator_api))]
 // compile check
 #[cfg(not(any(feature = "alloc", feature = "std")))]
 compile_error! { "either the `alloc` or `std` feature must be enabled for the rshyper crate" }
