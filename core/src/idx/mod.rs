@@ -205,6 +205,24 @@ mod tests {
         assert_eq!(history.next_vertex().unwrap(), 0);
     }
 
+    /// from #128: a history may hold an id twice; retaining away one copy must keep it reserved
+    #[test]
+    fn test_tracker_rejects_ids_kept_after_partial_retain() -> crate::Result<()> {
+        let mut history = IndexTracker::<usize>::zero();
+        let e0 = history.next_edge()?;
+        history.add_edge(e0);
+        // drop only one of the two copies of `e0`
+        let mut seen = false;
+        history.retain_edges(|_| !core::mem::replace(&mut seen, true));
+        assert_eq!(history.edges(), &[e0]);
+        history.set_cursor(IndexFrame::zero());
+        assert!(matches!(
+            history.next_edge(),
+            Err(IndexError::DuplicateIndex)
+        ));
+        Ok(())
+    }
+
     #[test]
     fn test_step_overflow_is_an_error() {
         let mut id = VertexId::new(u8::MAX - 1);

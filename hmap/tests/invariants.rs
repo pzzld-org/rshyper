@@ -360,6 +360,11 @@ fn rewound_cursor_allocation_is_error_atomic() -> Result<()> {
         g.add_link([a, b]),
         Err(Error::IndexError(IndexError::DuplicateIndex))
     ));
+    // from #128: the batch insert reports the failure instead of dropping the weight
+    assert!(matches!(
+        g.add_nodes([0]).collect::<Vec<_>>().as_slice(),
+        [Err(Error::IndexError(IndexError::DuplicateIndex))]
+    ));
     let after = (g.order(), g.size(), g.history().clone(), *g.position());
     assert_eq!(before, after);
     assert_eq!(before.2.nodes(), after.2.nodes());

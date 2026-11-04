@@ -70,18 +70,17 @@ where
         // insert the new node into the vertices map
         self.insert_node_unchecked(node)
     }
-    /// given a set of weights, insert a new node into the graph for each and return its id as
-    /// an iterator of [`VertexId`]. Nodes are added lazily as the iterator is consumed, and it
-    /// stops at the first allocation error; use [`add_node`](Self::add_node) to observe it.
-    pub fn add_nodes<I>(&mut self, weights: I) -> impl Iterator<Item = VertexId<Ix>>
+    /// given a set of weights, insert a new node into the graph for each and return the result
+    /// of each insertion, in order; see [`add_node`](Self::add_node). Nodes are added lazily as
+    /// the iterator is consumed, so a failed allocation is reported, never silently dropped.
+    pub fn add_nodes<I>(&mut self, weights: I) -> impl Iterator<Item = Result<VertexId<Ix>>>
     where
         I: IntoIterator<Item = N>,
         Ix: AddStep<Output = Ix> + Copy + PartialOrd,
     {
-        // an allocation error repeats for every later call, so stop at the first one
         weights
             .into_iter()
-            .map_while(|weight| self.add_node(Weight(weight)).ok())
+            .map(|weight| self.add_node(Weight(weight)))
     }
     /// add a new hypernode using the logical [`Default`] for the weight of type `N` and
     /// return its index.
