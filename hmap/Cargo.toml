@@ -50,6 +50,11 @@ harness = false
 name = "hyper_map"
 required-features = ["rand", "std"]
 
+[[bench]]
+harness = false
+name = "incidence"
+required-features = ["algo", "std"]
+
 [dependencies]
 rshyper-algo = { optional = true, workspace = true }
 rshyper-core = { features = ["hashbrown"], workspace = true }
