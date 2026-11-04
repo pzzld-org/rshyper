@@ -248,19 +248,27 @@ where
     {
         self.nodes_mut().entry(index)
     }
-    /// computes the next edge index before replacing and returning the previous value
-    pub fn next_edge_id(&mut self) -> EdgeId<Ix>
+    /// allocates and records the next edge index; see [`IndexTracker::next_edge`].
+    ///
+    /// # Errors
+    ///
+    /// [`IndexError::DuplicateIndex`](idx::IndexError::DuplicateIndex) if the cursor's id is
+    /// already in the history (for example after [`set_position`](Self::set_position) moved
+    /// it back) and [`IndexError::IndexOutOfBounds`](idx::IndexError::IndexOutOfBounds) if
+    /// the index space is exhausted. The graph is unchanged on error.
+    pub fn next_edge_id(&mut self) -> rshyper_core::Result<EdgeId<Ix>>
     where
-        Ix: AddStep<Output = Ix> + Clone + PartialEq,
+        Ix: AddStep<Output = Ix> + Clone + PartialOrd,
     {
-        self.history_mut().next_edge().unwrap()
+        Ok(self.history_mut().next_edge()?)
     }
-    /// computes the next node index before replacing and returning the previous value
-    pub fn next_vertex_id(&mut self) -> VertexId<Ix>
+    /// allocates and records the next node index; see [`next_edge_id`](Self::next_edge_id)
+    /// for the errors.
+    pub fn next_vertex_id(&mut self) -> rshyper_core::Result<VertexId<Ix>>
     where
-        Ix: AddStep<Output = Ix> + Clone + PartialEq,
+        Ix: AddStep<Output = Ix> + Clone + PartialOrd,
     {
-        self.history_mut().next_vertex().unwrap()
+        Ok(self.history_mut().next_vertex()?)
     }
     /// returns the order of the hypergraph, which is defined to be the number of nodes in `X`
     /// where `H=(X,E)`.
