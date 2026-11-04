@@ -7,7 +7,7 @@ use crate::traits::RawDomain;
 
 /// Here, a [`Link`] essentially defines the layout of an edge within a hypergraph. The
 /// implementation is generic over the type of domain it contains, which can be a set of
-/// vertices or any other structure that implements the [`Domain`] trait.
+/// vertices or any other structure that implements the [`RawDomain`] trait.
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(
     feature = "serde",

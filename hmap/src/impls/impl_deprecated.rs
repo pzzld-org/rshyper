@@ -65,7 +65,7 @@ where
     pub fn add_surface<I>(&mut self, vertices: I, weight: Weight<E>) -> Result<EdgeId<Ix>>
     where
         I: IntoIterator<Item = VertexId<Ix>>,
-        Ix: AddStep<Output = Ix> + Clone,
+        Ix: AddStep<Output = Ix> + Clone + PartialOrd,
         S: Default,
     {
         self.add_edge(vertices, weight)

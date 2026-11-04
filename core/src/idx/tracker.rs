@@ -22,6 +22,108 @@ where
     pub(crate) cursor: IndexFrame<Ix>,
     pub(crate) edges: Vec<EdgeId<Ix>>,
     pub(crate) nodes: Vec<VertexId<Ix>>,
+    /// cached upper bounds of the histories; not part of equality, hashing or serde
+    #[cfg_attr(feature = "serde", serde(skip))]
+    pub(crate) marks: Marks<Ix>,
+}
+
+/// The largest id recorded in each history, so allocation can skip the history scan while
+/// the cursor stays above it. A bound is an upper bound (removals keep it valid); `*_known`
+/// is false after any raw history access, and the next allocation recomputes it once.
+#[derive(Clone, Debug)]
+pub(crate) struct Marks<Ix> {
+    edge: Option<Ix>,
+    node: Option<Ix>,
+    edge_known: bool,
+    node_known: bool,
+}
+
+impl<Ix> Marks<Ix> {
+    const fn empty() -> Self {
+        Self {
+            edge: None,
+            node: None,
+            edge_known: true,
+            node_known: true,
+        }
+    }
+}
+
+impl<Ix> Default for Marks<Ix> {
+    /// unknown, so a deserialized or defaulted tracker recomputes before trusting it
+    fn default() -> Self {
+        Self {
+            edge: None,
+            node: None,
+            edge_known: false,
+            node_known: false,
+        }
+    }
+}
+
+impl<Ix> PartialEq for Marks<Ix> {
+    fn eq(&self, _: &Self) -> bool {
+        true
+    }
+}
+
+impl<Ix> Eq for Marks<Ix> {}
+
+impl<Ix> PartialOrd for Marks<Ix> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<Ix> Ord for Marks<Ix> {
+    fn cmp(&self, _: &Self) -> core::cmp::Ordering {
+        core::cmp::Ordering::Equal
+    }
+}
+
+impl<Ix> core::hash::Hash for Marks<Ix> {
+    fn hash<H: core::hash::Hasher>(&self, _: &mut H) {}
+}
+
+/// allocate `cursor`'s current id, rejecting it if `history` already holds it. Nothing
+/// changes on error. O(1) while the cursor is above the cached bound, O(history) otherwise.
+fn allocate<Ix, K>(
+    cursor: &mut crate::idx::IndexBase<Ix, K>,
+    history: &mut Vec<crate::idx::IndexBase<Ix, K>>,
+    bound: &mut Option<Ix>,
+    known: &mut bool,
+) -> IndexResult<crate::idx::IndexBase<Ix, K>>
+where
+    Ix: RawIndex + AddStep<Output = Ix> + Clone + PartialOrd,
+    K: crate::idx::IndexType,
+{
+    if !*known {
+        *bound = history
+            .iter()
+            .map(|id| id.get())
+            .fold(None::<&Ix>, |acc, x| match acc {
+                Some(m) if x > m => Some(x),
+                Some(m) => Some(m),
+                None => Some(x),
+            })
+            .cloned();
+        *known = true;
+    }
+    let id = cursor.get();
+    let fresh = match bound.as_ref() {
+        Some(max) => id > max,
+        None => true,
+    };
+    if !fresh && history.iter().any(|h| h.get() == id) {
+        return Err(IndexError::DuplicateIndex);
+    }
+    // checked: an exhausted index space errors instead of wrapping onto old ids
+    let prev = cursor.step()?;
+    if fresh {
+        *bound = Some(prev.get().clone());
+    }
+    history.push(prev.clone());
+    Ok(prev)
 }
 
 impl<Ix> IndexTracker<Ix>
@@ -41,6 +143,7 @@ where
             cursor,
             edges: Vec::new(),
             nodes: Vec::new(),
+            marks: Marks::empty(),
         }
     }
     /// create a new history with the cursor initialized to `1`
@@ -70,7 +173,10 @@ where
         &self.edges
     }
     /// returns a mutable reference to the edge history
+    ///
+    /// Edits made through it are not checked; the next allocation rescans the history once.
     pub const fn edges_mut(&mut self) -> &mut Vec<EdgeId<Ix>> {
+        self.marks.edge_known = false;
         &mut self.edges
     }
     /// returns an immutable reference to the node history
@@ -78,7 +184,10 @@ where
         &self.nodes
     }
     /// returns a mutable reference to the history of created nodes
+    ///
+    /// Edits made through it are not checked; the next allocation rescans the history once.
     pub const fn nodes_mut(&mut self) -> &mut Vec<VertexId<Ix>> {
+        self.marks.node_known = false;
         &mut self.nodes
     }
     /// set the current position and return a mutable reference to the tracker
@@ -106,12 +215,14 @@ where
     }
     /// consumes the current instance to create another with the given edge history
     #[inline]
-    pub fn with_edges(self, edges: Vec<EdgeId<Ix>>) -> Self {
+    pub fn with_edges(mut self, edges: Vec<EdgeId<Ix>>) -> Self {
+        self.marks.edge_known = false;
         Self { edges, ..self }
     }
     /// consumes the current instance to create another with the given node history
     #[inline]
-    pub fn with_nodes(self, nodes: Vec<VertexId<Ix>>) -> Self {
+    pub fn with_nodes(mut self, nodes: Vec<VertexId<Ix>>) -> Self {
+        self.marks.node_known = false;
         Self { nodes, ..self }
     }
     /// add a new edge index to the history.
@@ -132,8 +243,9 @@ where
         Ix: Default,
     {
         // clear the nodes and edges
-        self.edges_mut().clear();
-        self.nodes_mut().clear();
+        self.edges.clear();
+        self.nodes.clear();
+        self.marks = Marks::empty();
         // reset the cursor to the initial position
         self.cursor_mut().reset();
         // return a mutable reference
@@ -212,7 +324,8 @@ where
     where
         F: FnMut(&EdgeId<Ix>) -> bool,
     {
-        self.edges_mut().retain(f);
+        // removal keeps the cached bound an upper bound
+        self.edges.retain(f);
     }
     /// retains only nodes satisfying the predicate `f`.
     #[inline]
@@ -220,43 +333,46 @@ where
     where
         F: FnMut(&VertexId<Ix>) -> bool,
     {
-        self.nodes_mut().retain(f);
+        // removal keeps the cached bound an upper bound
+        self.nodes.retain(f);
     }
-    /// steps the edge index forward before storing and returning the previous index
+    /// allocates the cursor's edge id: records it in the history, steps the cursor and
+    /// returns the id.
+    ///
+    /// Amortized O(1) while the cursor stays above every recorded id; after the cursor is
+    /// moved back (or the history is edited directly) each call scans the history.
+    ///
+    /// # Errors
+    ///
+    /// - [`IndexError::DuplicateIndex`] if the history already holds the cursor's id.
+    /// - [`IndexError::IndexOutOfBounds`] if stepping the cursor would overflow `Ix`.
+    ///
+    /// On error the cursor and the history are unchanged.
     #[inline]
     pub fn next_edge(&mut self) -> IndexResult<EdgeId<Ix>>
     where
-        Ix: AddStep<Output = Ix> + Clone + PartialEq,
+        Ix: AddStep<Output = Ix> + Clone + PartialOrd,
     {
-        // step the current edge cursor forward before replacing and returning
-        // the previous index
-        let prev = self.cursor_mut().next_edge()?;
-        // check if the previous edge index is already in the history
-        if self.edges().contains(&prev) {
-            return Err(IndexError::DuplicateIndex);
-        }
-        // add the previous edge index to the history
-        self.add_edge(prev.clone());
-        // return the previous edge index
-        Ok(prev)
+        allocate(
+            &mut self.cursor.edge,
+            &mut self.edges,
+            &mut self.marks.edge,
+            &mut self.marks.edge_known,
+        )
     }
-    /// steps the node index forward before storing and returning the previous index
+    /// allocates the cursor's vertex id; see [`next_edge`](IndexTracker::next_edge) for the
+    /// cost and the errors.
     #[inline]
     pub fn next_vertex(&mut self) -> IndexResult<VertexId<Ix>>
     where
-        Ix: AddStep<Output = Ix> + Clone + PartialEq,
+        Ix: AddStep<Output = Ix> + Clone + PartialOrd,
     {
-        // step the current node cursor forward before replacing and returning
-        // the previous index
-        let prev = self.cursor_mut().next_node()?;
-        // check if the previous node index is already in the history
-        if self.nodes().contains(&prev) {
-            return Err(IndexError::DuplicateIndex);
-        }
-        // add the previous node index to the history
-        self.add_node(prev.clone());
-        // return the previous node index
-        Ok(prev)
+        allocate(
+            &mut self.cursor.node,
+            &mut self.nodes,
+            &mut self.marks.node,
+            &mut self.marks.node_known,
+        )
     }
     /// returns the total number of edges within the history
     pub fn size(&self) -> usize {
@@ -292,14 +408,14 @@ where
     #[deprecated(since = "0.1.2", note = "use `next_edge` instead")]
     pub fn next_edge_index(&mut self) -> Result<EdgeId<Ix>, IndexError>
     where
-        Ix: AddStep<Output = Ix> + Copy + PartialEq,
+        Ix: AddStep<Output = Ix> + Copy + PartialOrd,
     {
         self.next_edge()
     }
     #[deprecated(since = "0.1.2", note = "use `next_point` instead")]
     pub fn next_vertex_index(&mut self) -> Result<VertexId<Ix>, IndexError>
     where
-        Ix: AddStep<Output = Ix> + Copy + PartialEq,
+        Ix: AddStep<Output = Ix> + Copy + PartialOrd,
     {
         self.next_vertex()
     }

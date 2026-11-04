@@ -3,7 +3,7 @@
     Contrib: @FL03
 */
 
-/// A generic [`IndexBase`] implementation used to represent various [_kinds_](GraphIndex) of
+/// A generic [`IndexBase`] implementation used to represent various [_kinds_](super::IndexType) of
 /// indices
 #[derive(Clone, Copy, Hash, Ord, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
