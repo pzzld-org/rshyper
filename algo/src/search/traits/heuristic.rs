@@ -3,7 +3,7 @@
     authors: @FL03
 */
 use rshyper::idx::{self, VertexId};
-/// [`Heuristic`] defines a common interface for heuristic functions compatible with the [`A*`](AStarSearch)
+/// [`Heuristic`] defines a common interface for heuristic functions compatible with the [`A*`](crate::AStarSearch)
 /// search implementation
 pub trait Heuristic<T = idx::Udx> {
     type Output;

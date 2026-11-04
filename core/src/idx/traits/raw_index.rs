@@ -21,7 +21,7 @@ where
         alloc::format!("{self}")
     }
 }
-/// The [`HashIndex`] trait extends the [`StdIndex`] trait to include additional operations and
+/// The [`HashIndex`] trait extends the [`RawIndex`] trait to include additional operations and
 /// behaviours commonly expected from indices in a hypergraph.
 ///
 /// **note:** this trait is automatically implemented for all [`RawIndex`] implementors that

@@ -81,6 +81,104 @@
 //! let e3 = graph.add_edge([v0, v2], Weight(5)).expect("failed to add surface");
 //! ```
 //!
+//! ### _Example 2: Macros_
+//!
+//! With the `macros` feature enabled, the [`hypergraph!`], [`hyperedge!`], and
+//! [`hypernode!`] macros allow nodes and edges to be defined in a more declarative way.
+//!
+//! #### `hypergraph!`
+//!
+//! ```rust
+//! use rshyper::{hypergraph, UnHyperMap};
+//! // initialize a new undirected hypergraph
+//! let mut graph = UnHyperMap::<usize, usize>::undirected();
+//! // use the macro to insert nodes and edges into the graph
+//! hypergraph! {
+//!     graph {
+//!         nodes: {
+//!             let v0;
+//!             let v1;
+//!             let v2 = 10;
+//!         };
+//!         edges: {
+//!             let e0: [v0, v1];
+//!             let e1: [v0, v1, v2] = 10;
+//!         };
+//!     }
+//! }
+//! ```
+//!
+//! or
+//!
+//! ```rust
+//! use rshyper::{hypergraph, UnHyperMap};
+//!
+//! // use the macro to initialize a new hypergraph, then insert nodes and edges
+//! hypergraph! {
+//!     let mut graph: UnHyperMap::<usize, usize> {
+//!         nodes: {
+//!             let v0;
+//!             let v1 = 1;
+//!             let v2;
+//!         };
+//!         edges: {
+//!             let e0: [v0, v1];
+//!             let e1: [v0, v2];
+//!             let e2: [v0, v1, v2] = 10;
+//!         };
+//!     }
+//! }
+//! ```
+//!
+//! #### `hyperedge!`
+//!
+//! ```rust
+//! use rshyper::{HyperMap, IntoWeight};
+//!
+//! fn main() -> rshyper::Result<()> {
+//!     // initialize a new undirected hypergraph
+//!     let mut graph = HyperMap::<usize, usize>::undirected();
+//!     // add some vertices
+//!     let v0 = graph.add_node(1.into_weight())?;
+//!     let v1 = graph.add_node(2.into_weight())?;
+//!     let v2 = graph.add_node(3.into_weight())?;
+//!     // use the macro to insert edges into the graph
+//!     rshyper::hyperedge! {
+//!         graph {
+//!             let e0: [v0, v1];
+//!             let e1: [v0, v1, v2] = 10;
+//!         }
+//!     }
+//!     // verify the order of the edges
+//!     assert_eq!(graph.get_edge_order(&e0)?, 2);
+//!     assert_eq!(graph.get_edge_order(&e1)?, 3);
+//!     // verify the weights of the edges
+//!     assert_eq!(graph.get_edge_weight(&e0)?, &<usize>::default());
+//!     assert_eq!(graph.get_edge_weight(&e1)?, &10);
+//!     // finish
+//!     Ok(())
+//! }
+//! ```
+//!
+//! #### `hypernode!`
+//!
+//! ```rust
+//! use rshyper::HyperMap;
+//! // initialize a new, undirected hypergraph
+//! let mut graph = HyperMap::<usize, usize>::undirected();
+//! // use the macro to insert nodes into the graph
+//! rshyper::hypernode! {
+//!     graph {
+//!         let v0;
+//!         let v1;
+//!         let v2;
+//!         let v3 = 1;
+//!         let v4 = 2;
+//!         let v5 = 3;
+//!     }
+//! }
+//! ```
+//!
 #![allow(
     clippy::missing_errors_doc,
     clippy::missing_panics_doc,
@@ -92,7 +190,6 @@
     clippy::upper_case_acronyms
 )]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(feature = "nightly", feature(allocator_api))]
 // compile check
 #[cfg(not(any(feature = "alloc", feature = "std")))]
 compile_error! { "either the `alloc` or `std` feature must be enabled for the rshyper crate" }
