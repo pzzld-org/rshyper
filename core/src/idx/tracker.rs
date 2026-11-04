@@ -5,15 +5,26 @@
 use super::{EdgeId, IndexFrame, RawIndex, VertexId};
 use crate::AddStep;
 use crate::idx::error::{IndexError, IndexResult};
+use alloc::collections::BTreeSet;
 use alloc::vec::Vec;
 
 /// the [`IndexTracker`] keeps a history of the created indices and the current cursor position.
+///
+/// Each history is mirrored by a set so that [`next_edge`](Self::next_edge) and
+/// [`next_vertex`](Self::next_vertex) reject recorded ids in `O(log h)`. Every method keeps the
+/// two in sync except the raw accessors ([`edges_mut`](Self::edges_mut),
+/// [`nodes_mut`](Self::nodes_mut), [`edge_mut`](Self::edge_mut) and
+/// [`node_mut`](Self::node_mut)), which bypass the mirror (#105).
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[repr(C)]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize),
-    serde(default, rename_all = "snake_case")
+    serde(
+        bound(deserialize = "Ix: Clone + Default + Ord + serde::Deserialize<'de>"),
+        from = "RawTracker<Ix>",
+        rename_all = "snake_case"
+    )
 )]
 pub struct IndexTracker<Ix = usize>
 where
@@ -22,6 +33,12 @@ where
     pub(crate) cursor: IndexFrame<Ix>,
     pub(crate) edges: Vec<EdgeId<Ix>>,
     pub(crate) nodes: Vec<VertexId<Ix>>,
+    /// mirrors `edges` for membership checks
+    #[cfg_attr(feature = "serde", serde(skip))]
+    pub(crate) edge_set: BTreeSet<Ix>,
+    /// mirrors `nodes` for membership checks
+    #[cfg_attr(feature = "serde", serde(skip))]
+    pub(crate) node_set: BTreeSet<Ix>,
 }
 
 impl<Ix> IndexTracker<Ix>
@@ -41,6 +58,8 @@ where
             cursor,
             edges: Vec::new(),
             nodes: Vec::new(),
+            edge_set: BTreeSet::new(),
+            node_set: BTreeSet::new(),
         }
     }
     /// create a new history with the cursor initialized to `1`
@@ -69,7 +88,8 @@ where
     pub const fn edges(&self) -> &Vec<EdgeId<Ix>> {
         &self.edges
     }
-    /// returns a mutable reference to the edge history
+    /// returns a mutable reference to the edge history; writes through it bypass the membership
+    /// mirror (#105)
     pub const fn edges_mut(&mut self) -> &mut Vec<EdgeId<Ix>> {
         &mut self.edges
     }
@@ -77,7 +97,8 @@ where
     pub const fn nodes(&self) -> &Vec<VertexId<Ix>> {
         &self.nodes
     }
-    /// returns a mutable reference to the history of created nodes
+    /// returns a mutable reference to the history of created nodes; writes through it bypass the
+    /// membership mirror (#105)
     pub const fn nodes_mut(&mut self) -> &mut Vec<VertexId<Ix>> {
         &mut self.nodes
     }
@@ -89,14 +110,22 @@ where
     }
     /// overwrite the edge history and return a mutable reference to the tracker
     #[inline]
-    pub fn set_edges(&mut self, edges: Vec<EdgeId<Ix>>) -> &mut Self {
-        *self.edges_mut() = edges;
+    pub fn set_edges(&mut self, edges: Vec<EdgeId<Ix>>) -> &mut Self
+    where
+        Ix: Clone + Ord,
+    {
+        self.edge_set = edges.iter().map(|id| id.get().clone()).collect();
+        self.edges = edges;
         self
     }
     /// overwrite the node history and return a mutable reference to the tracker
     #[inline]
-    pub fn set_nodes(&mut self, nodes: Vec<VertexId<Ix>>) -> &mut Self {
-        *self.nodes_mut() = nodes;
+    pub fn set_nodes(&mut self, nodes: Vec<VertexId<Ix>>) -> &mut Self
+    where
+        Ix: Clone + Ord,
+    {
+        self.node_set = nodes.iter().map(|id| id.get().clone()).collect();
+        self.nodes = nodes;
         self
     }
     /// consumes the current instance to create another with the given position
@@ -106,23 +135,39 @@ where
     }
     /// consumes the current instance to create another with the given edge history
     #[inline]
-    pub fn with_edges(self, edges: Vec<EdgeId<Ix>>) -> Self {
-        Self { edges, ..self }
+    pub fn with_edges(mut self, edges: Vec<EdgeId<Ix>>) -> Self
+    where
+        Ix: Clone + Ord,
+    {
+        self.set_edges(edges);
+        self
     }
     /// consumes the current instance to create another with the given node history
     #[inline]
-    pub fn with_nodes(self, nodes: Vec<VertexId<Ix>>) -> Self {
-        Self { nodes, ..self }
+    pub fn with_nodes(mut self, nodes: Vec<VertexId<Ix>>) -> Self
+    where
+        Ix: Clone + Ord,
+    {
+        self.set_nodes(nodes);
+        self
     }
     /// add a new edge index to the history.
     #[inline]
-    pub fn add_edge(&mut self, index: EdgeId<Ix>) -> &mut Self {
+    pub fn add_edge(&mut self, index: EdgeId<Ix>) -> &mut Self
+    where
+        Ix: Clone + Ord,
+    {
+        self.edge_set.insert(index.get().clone());
         self.edges_mut().push(index);
         self
     }
     /// add a new node index to the history.
     #[inline]
-    pub fn add_node(&mut self, index: VertexId<Ix>) -> &mut Self {
+    pub fn add_node(&mut self, index: VertexId<Ix>) -> &mut Self
+    where
+        Ix: Clone + Ord,
+    {
+        self.node_set.insert(index.get().clone());
         self.nodes_mut().push(index);
         self
     }
@@ -134,6 +179,8 @@ where
         // clear the nodes and edges
         self.edges_mut().clear();
         self.nodes_mut().clear();
+        self.edge_set.clear();
+        self.node_set.clear();
         // reset the cursor to the initial position
         self.cursor_mut().reset();
         // return a mutable reference
@@ -164,7 +211,8 @@ where
     {
         self.edges().get(index)
     }
-    /// returns a mutable reference to the edge id
+    /// returns a mutable reference to the edge id; writes through it bypass the membership
+    /// mirror (#105)
     #[inline]
     pub fn edge_mut<I>(&mut self, index: I) -> Option<&mut I::Output>
     where
@@ -180,7 +228,8 @@ where
     {
         self.nodes().get(index)
     }
-    /// returns a mutable reference to the node id
+    /// returns a mutable reference to the node id; writes through it bypass the membership
+    /// mirror (#105)
     #[inline]
     pub fn node_mut<I>(&mut self, index: I) -> Option<&mut I::Output>
     where
@@ -192,7 +241,7 @@ where
     #[inline]
     pub fn remove_edge(&mut self, index: &Ix) -> &mut Self
     where
-        Ix: PartialEq,
+        Ix: Ord,
     {
         self.retain_edges(|i| i != index);
         self
@@ -201,58 +250,82 @@ where
     #[inline]
     pub fn remove_node(&mut self, index: &Ix) -> &mut Self
     where
-        Ix: PartialEq,
+        Ix: Ord,
     {
         self.retain_nodes(|i| i != index);
         self
     }
     /// remove the index from the history for the specified kind.
     #[inline]
-    pub fn retain_edges<F>(&mut self, f: F)
+    pub fn retain_edges<F>(&mut self, mut f: F)
     where
         F: FnMut(&EdgeId<Ix>) -> bool,
+        Ix: Ord,
     {
-        self.edges_mut().retain(f);
+        let Self {
+            edges, edge_set, ..
+        } = self;
+        edges.retain(|id| {
+            let keep = f(id);
+            if !keep {
+                edge_set.remove(id.get());
+            }
+            keep
+        });
     }
     /// retains only nodes satisfying the predicate `f`.
     #[inline]
-    pub fn retain_nodes<F>(&mut self, f: F)
+    pub fn retain_nodes<F>(&mut self, mut f: F)
     where
         F: FnMut(&VertexId<Ix>) -> bool,
+        Ix: Ord,
     {
-        self.nodes_mut().retain(f);
+        let Self {
+            nodes, node_set, ..
+        } = self;
+        nodes.retain(|id| {
+            let keep = f(id);
+            if !keep {
+                node_set.remove(id.get());
+            }
+            keep
+        });
     }
-    /// steps the edge index forward before storing and returning the previous index
+    /// steps the edge index forward before storing and returning the previous index; if that
+    /// index is already in the history, the tracker is left unchanged and
+    /// [`DuplicateIndex`](IndexError::DuplicateIndex) is returned.
     #[inline]
     pub fn next_edge(&mut self) -> IndexResult<EdgeId<Ix>>
     where
-        Ix: AddStep<Output = Ix> + Clone + PartialEq,
+        Ix: AddStep<Output = Ix> + Clone + Ord,
     {
+        // check the on-deck index before stepping so a rejection leaves the cursor untouched
+        if self.edge_set.contains(self.cursor().edge().get()) {
+            return Err(IndexError::DuplicateIndex);
+        }
         // step the current edge cursor forward before replacing and returning
         // the previous index
         let prev = self.cursor_mut().next_edge()?;
-        // check if the previous edge index is already in the history
-        if self.edges().contains(&prev) {
-            return Err(IndexError::DuplicateIndex);
-        }
         // add the previous edge index to the history
         self.add_edge(prev.clone());
         // return the previous edge index
         Ok(prev)
     }
-    /// steps the node index forward before storing and returning the previous index
+    /// steps the node index forward before storing and returning the previous index; if that
+    /// index is already in the history, the tracker is left unchanged and
+    /// [`DuplicateIndex`](IndexError::DuplicateIndex) is returned.
     #[inline]
     pub fn next_vertex(&mut self) -> IndexResult<VertexId<Ix>>
     where
-        Ix: AddStep<Output = Ix> + Clone + PartialEq,
+        Ix: AddStep<Output = Ix> + Clone + Ord,
     {
+        // check the on-deck index before stepping so a rejection leaves the cursor untouched
+        if self.node_set.contains(self.cursor().node().get()) {
+            return Err(IndexError::DuplicateIndex);
+        }
         // step the current node cursor forward before replacing and returning
         // the previous index
         let prev = self.cursor_mut().next_node()?;
-        // check if the previous node index is already in the history
-        if self.nodes().contains(&prev) {
-            return Err(IndexError::DuplicateIndex);
-        }
         // add the previous node index to the history
         self.add_node(prev.clone());
         // return the previous node index
@@ -275,32 +348,69 @@ where
     Ix: RawIndex,
 {
     #[deprecated(since = "0.1.2", note = "use `add_edge` instead")]
-    pub fn add_edge_index(&mut self, index: EdgeId<Ix>) -> &mut Self {
+    pub fn add_edge_index(&mut self, index: EdgeId<Ix>) -> &mut Self
+    where
+        Ix: Clone + Ord,
+    {
         self.add_edge(index)
     }
     #[deprecated(since = "0.1.2", note = "use `add_node` instead")]
-    pub fn add_vertex_index(&mut self, index: VertexId<Ix>) -> &mut Self {
+    pub fn add_vertex_index(&mut self, index: VertexId<Ix>) -> &mut Self
+    where
+        Ix: Clone + Ord,
+    {
         self.add_node(index)
     }
     #[deprecated(since = "0.1.2", note = "use `remove_node` instead")]
     pub fn remove_vertex(&mut self, index: &Ix) -> &mut Self
     where
-        Ix: PartialEq,
+        Ix: Ord,
     {
         self.remove_node(index)
     }
     #[deprecated(since = "0.1.2", note = "use `next_edge` instead")]
     pub fn next_edge_index(&mut self) -> Result<EdgeId<Ix>, IndexError>
     where
-        Ix: AddStep<Output = Ix> + Copy + PartialEq,
+        Ix: AddStep<Output = Ix> + Copy + Ord,
     {
         self.next_edge()
     }
     #[deprecated(since = "0.1.2", note = "use `next_point` instead")]
     pub fn next_vertex_index(&mut self) -> Result<VertexId<Ix>, IndexError>
     where
-        Ix: AddStep<Output = Ix> + Copy + PartialEq,
+        Ix: AddStep<Output = Ix> + Copy + Ord,
     {
         self.next_vertex()
+    }
+}
+
+/// the serialized form of an [`IndexTracker`]; deserializing through it rebuilds the mirrors
+#[cfg(feature = "serde")]
+#[derive(Default, serde::Deserialize)]
+#[serde(default, rename_all = "snake_case")]
+struct RawTracker<Ix>
+where
+    Ix: RawIndex,
+{
+    cursor: IndexFrame<Ix>,
+    edges: Vec<EdgeId<Ix>>,
+    nodes: Vec<VertexId<Ix>>,
+}
+
+#[cfg(feature = "serde")]
+impl<Ix> From<RawTracker<Ix>> for IndexTracker<Ix>
+where
+    Ix: RawIndex + Clone + Ord,
+{
+    fn from(
+        RawTracker {
+            cursor,
+            edges,
+            nodes,
+        }: RawTracker<Ix>,
+    ) -> Self {
+        Self::from_cursor(cursor)
+            .with_edges(edges)
+            .with_nodes(nodes)
     }
 }

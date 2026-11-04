@@ -22,7 +22,7 @@ where
     pub fn add_link<I>(&mut self, vertices: I) -> Result<EdgeId<Ix>>
     where
         I: IntoIterator<Item = VertexId<Ix>>,
-        Ix: AddStep<Output = Ix> + Clone,
+        Ix: AddStep<Output = Ix> + Clone + Ord,
         E: Default,
         S: Default,
     {
@@ -32,12 +32,13 @@ where
     /// edge index.
     ///
     /// Repeated vertices collapse into one incidence (set semantics). The call fails with
-    /// [`Error::NodeNotFound`] if any vertex is missing and [`Error::EmptyHyperedge`] if the
-    /// domain is empty; on error the graph, including its history, is unchanged.
+    /// [`Error::NodeNotFound`] if any vertex is missing, [`Error::EmptyHyperedge`] if the
+    /// domain is empty and [`IndexError::DuplicateIndex`] if the next edge id is already in the
+    /// history; on error the graph, including its history, is unchanged.
     pub fn add_edge<I>(&mut self, vertices: I, weight: Weight<E>) -> Result<EdgeId<Ix>>
     where
         I: IntoIterator<Item = VertexId<Ix>>,
-        Ix: AddStep<Output = Ix> + Clone,
+        Ix: AddStep<Output = Ix> + Clone + Ord,
         S: Default,
     {
         let mut verts = VertexSet::<Ix, S>::default();
@@ -52,7 +53,7 @@ where
             return Err(Error::EmptyHyperedge);
         }
         // fetch the next edge index
-        let id = self.next_edge_id();
+        let id = self.next_edge_id()?;
         // create a new surface
         let surface = HyperEdge::from_parts(id.clone(), verts, weight);
         // add the hyperedge to the graph
@@ -61,10 +62,10 @@ where
     /// add a new node with the given weight and return its index
     pub fn add_node(&mut self, Weight(weight): Weight<N>) -> Result<VertexId<Ix>>
     where
-        Ix: AddStep<Output = Ix> + Copy,
+        Ix: AddStep<Output = Ix> + Copy + Ord,
     {
         // generate a new index to identify the new node
-        let ndx = self.next_vertex_id();
+        let ndx = self.next_vertex_id()?;
         // initialize a new node with the given weight & index
         let node = Node::new(ndx, weight);
         // insert the new node into the vertices map
@@ -75,7 +76,7 @@ where
     pub fn add_nodes<I>(&mut self, weights: I) -> impl Iterator<Item = VertexId<Ix>>
     where
         I: IntoIterator<Item = N>,
-        Ix: AddStep<Output = Ix> + Copy,
+        Ix: AddStep<Output = Ix> + Copy + Ord,
     {
         weights
             .into_iter()
@@ -86,7 +87,7 @@ where
     pub fn add_vertex(&mut self) -> Result<VertexId<Ix>>
     where
         N: Default,
-        Ix: AddStep<Output = Ix> + Copy,
+        Ix: AddStep<Output = Ix> + Copy + Ord,
     {
         self.add_node(Default::default())
     }
@@ -272,7 +273,7 @@ where
     where
         Q: ?Sized + Eq + Hash,
         EdgeId<Ix>: Borrow<Q>,
-        Ix: AddStep<Output = Ix> + Copy,
+        Ix: AddStep<Output = Ix> + Copy + Ord,
         S: Default,
         for<'a> &'a E: core::ops::Add<Output = E>,
     {
@@ -287,7 +288,7 @@ where
     where
         Q: ?Sized + Eq + Hash,
         EdgeId<Ix>: Borrow<Q>,
-        Ix: AddStep<Output = Ix> + Copy,
+        Ix: AddStep<Output = Ix> + Copy + Ord,
         F: FnOnce(&E, &E) -> E,
         S: Default,
     {
@@ -298,6 +299,8 @@ where
         if !self.contains_edge(e1) || !self.contains_edge(e2) {
             return Err(Error::EdgeNotFound);
         }
+        // allocate the new edge index before removing anything so a failure loses nothing
+        let edge_id = self.next_edge_id()?;
         // try and remove the two edges from the hypergraph
         let s1 = self.remove_edge(e1)?;
         let s2 = self.remove_edge(e2)?;
@@ -309,8 +312,6 @@ where
             .collect::<VertexSet<Ix, S>>();
         // merge the two weights using the provided function
         let weight = f(*s1.weight().view(), *s2.weight().view());
-        // generate a new edge index
-        let edge_id = self.next_edge_id();
         // initialize a new facet using the merged vertices, new index, and source weight
         let surface = HyperEdge::from_parts(edge_id, vertices, Weight(weight));
         // insert the new hyperedge into the surfaces map
@@ -328,6 +329,7 @@ where
     where
         Q: ?Sized + Eq + Hash,
         EdgeId<Ix>: Borrow<Q>,
+        Ix: Ord,
     {
         self.edges_mut()
             .remove(index)
@@ -354,6 +356,7 @@ where
     where
         Q: Eq + core::fmt::Debug + Hash,
         VertexId<Ix>: Borrow<Q>,
+        Ix: Ord,
     {
         #[cfg(feature = "tracing")]
         tracing::debug!("removing the vertex {index:?} from the hypergraph...");
@@ -392,6 +395,7 @@ where
     pub unsafe fn retain_nodes<F>(&mut self, f: F) -> &mut Self
     where
         F: FnMut(&VertexId<Ix>, &mut Node<N, Ix>) -> bool,
+        Ix: Ord,
     {
         let Self { nodes, history, .. } = self;
         nodes.retain(f);
@@ -407,6 +411,7 @@ where
     pub fn retain_edges<F>(&mut self, f: F) -> &mut Self
     where
         F: FnMut(&EdgeId<Ix>, &mut HashEdge<E, K, Ix, S>) -> bool,
+        Ix: Ord,
     {
         let Self { edges, history, .. } = self;
         edges.retain(f);
@@ -463,7 +468,7 @@ where
     /// if **any** of these condition are not met, an error will be thrown.
     pub(crate) fn insert_edge(&mut self, edge: HashEdge<E, K, Idx, S>) -> Result<EdgeId<Idx>>
     where
-        Idx: Clone,
+        Idx: Clone + Ord,
     {
         // check the graph to make sure the edge doesn't exist
         if self.contains_edge(edge.id()) {
@@ -502,7 +507,7 @@ where
     /// if **any** of these condition are not met, an error will be thrown.
     pub(crate) fn insert_node(&mut self, data: Node<N, Idx>) -> Result<VertexId<Idx>>
     where
-        Idx: Clone,
+        Idx: Clone + Ord,
     {
         // if the node already exists in the graph, return an error
         if self.contains_node(data.id()) {

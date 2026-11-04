@@ -6,8 +6,8 @@
 //! #105 invariant-safe mutations). Each test asserts the CORRECT behaviour and is expected to
 //! fail on the current code; it should pass once the defect is fixed.
 use core::hash::{BuildHasher, Hasher};
-use rshyper_core::idx::{EdgeId, VertexId};
-use rshyper_core::{Result, Weight};
+use rshyper_core::idx::{EdgeId, IndexError, IndexFrame, VertexId};
+use rshyper_core::{Error, Result, Weight};
 use rshyper_hmap::UnHyperMap;
 
 type Graph = UnHyperMap<usize, usize, usize, RevBuild>;
@@ -335,5 +335,64 @@ fn seq_iter_skips_dangling_history_ids() -> Result<()> {
     let edges: Vec<_> = g.seq_iter_edge_keys().cloned().collect();
     assert_eq!(edges, vec![e0]);
     assert_eq!(g.seq_iter_facets().count(), g.size());
+    Ok(())
+}
+
+/// #114: allocating an id that is already in the history (here after rewinding the cursor) must
+/// fail with `DuplicateIndex` and leave the graph, its history and its position untouched.
+#[test]
+fn rewound_allocation_is_error_atomic() -> Result<()> {
+    let mut g = Graph::undirected();
+    let v0 = g.add_vertex()?;
+    let v1 = g.add_vertex()?;
+    g.add_link([v0, v1])?;
+    g.set_position(IndexFrame::zero());
+    let position = *g.position();
+    let nodes = g.history().nodes().clone();
+    let edges = g.history().edges().clone();
+    let (order, size) = (g.order(), g.size());
+    assert!(matches!(
+        g.add_vertex(),
+        Err(Error::IndexError(IndexError::DuplicateIndex))
+    ));
+    assert!(matches!(
+        g.add_edge([v0, v1], Weight(0)),
+        Err(Error::IndexError(IndexError::DuplicateIndex))
+    ));
+    assert_eq!(g.order(), order);
+    assert_eq!(g.size(), size);
+    assert_eq!(g.history().nodes(), &nodes);
+    assert_eq!(g.history().edges(), &edges);
+    assert_eq!(g.position(), &position);
+    Ok(())
+}
+
+/// #114: a merge whose id allocation fails must not consume either operand.
+#[test]
+fn rewound_merge_is_error_atomic() -> Result<()> {
+    let mut g = Graph::undirected();
+    let v0 = g.add_vertex()?;
+    let v1 = g.add_vertex()?;
+    let v2 = g.add_vertex()?;
+    g.add_edge([v0, v1], Weight(1))?;
+    let e1 = g.add_edge([v1, v2], Weight(2))?;
+    let e2 = g.add_edge([v0, v2], Weight(3))?;
+    g.set_position(IndexFrame::zero());
+    let position = *g.position();
+    let nodes = g.history().nodes().clone();
+    let edges = g.history().edges().clone();
+    let size = g.size();
+    assert!(matches!(
+        g.merge_edges(&e1, &e2),
+        Err(Error::IndexError(IndexError::DuplicateIndex))
+    ));
+    assert!(
+        g.contains_edge(&e1) && g.contains_edge(&e2),
+        "a failed merge must not remove its operands"
+    );
+    assert_eq!(g.size(), size);
+    assert_eq!(g.history().nodes(), &nodes);
+    assert_eq!(g.history().edges(), &edges);
+    assert_eq!(g.position(), &position);
     Ok(())
 }

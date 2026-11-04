@@ -171,4 +171,43 @@ mod tests {
         assert_eq!(history.nodes(), &[v0, v1, v2]);
         Ok(())
     }
+
+    #[test]
+    fn test_tracker_rejects_recorded_ids() -> crate::Result<()> {
+        let mut history = IndexTracker::<usize>::zero();
+        let v0 = history.next_vertex()?;
+        history.next_vertex()?;
+        history.remove_node(v0.get());
+        // after a rewind the removed id is free again while the retained one is rejected
+        history.set_cursor(IndexFrame::zero());
+        assert_eq!(history.next_vertex()?, v0);
+        let before = history.clone();
+        assert!(matches!(
+            history.next_vertex(),
+            Err(IndexError::DuplicateIndex)
+        ));
+        assert_eq!(
+            history, before,
+            "a rejected id must leave the tracker unchanged"
+        );
+        history.clear();
+        assert_eq!(history.next_vertex()?, v0);
+        Ok(())
+    }
+
+    #[cfg(feature = "json")]
+    #[test]
+    fn test_tracker_serde_rebuilds_mirror() -> crate::Result<()> {
+        let mut history = IndexTracker::<usize>::zero();
+        history.next_vertex()?;
+        let json = serde_json::to_string(&history)?;
+        assert!(!json.contains("_set"), "the mirror must not be serialized");
+        let mut history: IndexTracker<usize> = serde_json::from_str(&json)?;
+        history.set_cursor(IndexFrame::zero());
+        assert!(matches!(
+            history.next_vertex(),
+            Err(IndexError::DuplicateIndex)
+        ));
+        Ok(())
+    }
 }

@@ -65,7 +65,7 @@ where
     pub fn add_surface<I>(&mut self, vertices: I, weight: Weight<E>) -> Result<EdgeId<Ix>>
     where
         I: IntoIterator<Item = VertexId<Ix>>,
-        Ix: AddStep<Output = Ix> + Clone,
+        Ix: AddStep<Output = Ix> + Clone + Ord,
         S: Default,
     {
         self.add_edge(vertices, weight)
@@ -78,6 +78,7 @@ where
     pub fn retain_surfaces<F>(&mut self, f: F) -> &mut Self
     where
         F: FnMut(&EdgeId<Ix>, &mut HashEdge<E, K, Ix, S>) -> bool,
+        Ix: Ord,
     {
         self.retain_edges(f)
     }
@@ -90,6 +91,7 @@ where
     where
         Q: ?Sized + Eq + Hash,
         EdgeId<Ix>: Borrow<Q>,
+        Ix: Ord,
     {
         self.remove_edge(index)
     }

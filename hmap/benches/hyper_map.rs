@@ -10,7 +10,7 @@ use hyper_map::HyperMap;
 use rshyper::prelude::{VertexId, Weight, generate_random_edge};
 
 use core::hint::black_box;
-use criterion::{BatchSize, Criterion};
+use criterion::{BatchSize, BenchmarkId, Criterion};
 
 /// benchmark various iterators provided by the `HyperMap` implementation.
 fn bench_hypermap(c: &mut Criterion) {
@@ -184,17 +184,22 @@ fn bench_hypermap_nodes(c: &mut Criterion) {
             BatchSize::SmallInput,
         )
     });
-    // benchmark the `add_node` function
-    group.bench_function("add_vertex", |b| {
-        b.iter_batched(
-            setup,
-            |mut graph| {
-                // add a vertex to the graph
-                let _ = graph.add_vertex();
-            },
-            BatchSize::SmallInput,
-        )
-    });
+    // benchmark adding `n` vertices to an empty graph; the growth per doubling exposes the
+    // cost of id allocation (#114)
+    for n in [20_000, 40_000, 80_000] {
+        group.bench_with_input(BenchmarkId::new("add_vertex", n), &n, |b, &n| {
+            b.iter_batched(
+                HyperMap::<Wt, Wt>::new,
+                |mut graph| {
+                    for _ in 0..n {
+                        graph.add_vertex().expect("failed to add vertex");
+                    }
+                    graph
+                },
+                BatchSize::LargeInput,
+            )
+        });
+    }
     // benchmark the `add_node` function
     group.bench_with_input("add_node", &rand::random::<Wt>(), |b, &w| {
         b.iter_batched(

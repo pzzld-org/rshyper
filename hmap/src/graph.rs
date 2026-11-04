@@ -9,7 +9,7 @@ use core::hash::{BuildHasher, Hash};
 use hashbrown::DefaultHashBuilder;
 use rshyper_core::attrs::{DiAttrs, GraphProps, UnAttrs};
 use rshyper_core::idx::{self, EdgeId, HashIndex, IndexTracker, RawIndex, Udx, VertexId};
-use rshyper_core::{AddStep, GraphType, Mode};
+use rshyper_core::{AddStep, GraphType, Mode, Result};
 
 /// a type alias for a [directed](rshyper_core::Directed) [`HyperMap`]
 pub type DiHyperMap<N, E, Idx = Udx, S = DefaultHashBuilder> = HyperMap<N, E, DiAttrs<Idx>, S>;
@@ -248,19 +248,21 @@ where
     {
         self.nodes_mut().entry(index)
     }
-    /// computes the next edge index before replacing and returning the previous value
-    pub fn next_edge_id(&mut self) -> EdgeId<Ix>
+    /// computes the next edge index before replacing and returning the previous value; fails,
+    /// leaving the history unchanged, if that index is already recorded
+    pub fn next_edge_id(&mut self) -> Result<EdgeId<Ix>>
     where
-        Ix: AddStep<Output = Ix> + Clone + PartialEq,
+        Ix: AddStep<Output = Ix> + Clone + Ord,
     {
-        self.history_mut().next_edge().unwrap()
+        Ok(self.history_mut().next_edge()?)
     }
-    /// computes the next node index before replacing and returning the previous value
-    pub fn next_vertex_id(&mut self) -> VertexId<Ix>
+    /// computes the next node index before replacing and returning the previous value; fails,
+    /// leaving the history unchanged, if that index is already recorded
+    pub fn next_vertex_id(&mut self) -> Result<VertexId<Ix>>
     where
-        Ix: AddStep<Output = Ix> + Clone + PartialEq,
+        Ix: AddStep<Output = Ix> + Clone + Ord,
     {
-        self.history_mut().next_vertex().unwrap()
+        Ok(self.history_mut().next_vertex()?)
     }
     /// returns the order of the hypergraph, which is defined to be the number of nodes in `X`
     /// where `H=(X,E)`.

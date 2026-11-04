@@ -16,7 +16,7 @@ where
     E: DeserializeOwned,
     N: DeserializeOwned,
     S: BuildHasher + Default,
-    A::Ix: Default + Eq + Hash + DeserializeOwned,
+    A::Ix: Clone + Default + Eq + Hash + Ord + DeserializeOwned,
     A::Kind: DeserializeOwned,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -66,7 +66,7 @@ where
     E: DeserializeOwned,
     N: DeserializeOwned,
     S: BuildHasher + Default,
-    A::Ix: Default + Eq + Hash + DeserializeOwned,
+    A::Ix: Clone + Default + Eq + Hash + Ord + DeserializeOwned,
     A::Kind: DeserializeOwned,
 {
     type Value = HyperMap<N, E, A, S>;
