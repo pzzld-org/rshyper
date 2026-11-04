@@ -1,14 +1,14 @@
 #![crate_name = "rshyper"]
 #![crate_type = "lib"]
 #![doc(
-    html_logo_url = "https://raw.githubusercontent.com/FL03/rshyper/main/.artifacts/assets/logo.svg",
-    html_favicon_url = "https://raw.githubusercontent.com/FL03/rshyper/main/.artifacts/assets/logo.svg"
+    html_logo_url = "https://raw.githubusercontent.com/pzzld-org/rshyper/main/.artifacts/assets/logo.svg",
+    html_favicon_url = "https://raw.githubusercontent.com/pzzld-org/rshyper/main/.artifacts/assets/logo.svg"
 )]
 //! # rshyper
 //!
 //! [![crates.io](https://img.shields.io/crates/v/rshyper?style=for-the-badge&logo=rust)](https://crates.io/crates/rshyper)
 //! [![docs.rs](https://img.shields.io/docsrs/rshyper?style=for-the-badge&logo=docs.rs)](https://docs.rs/rshyper)
-//! [![GitHub License](https://img.shields.io/github/license/FL03/rshyper?style=for-the-badge&logo=github)](https://github.com/FL03/rshyper/blob/main/LICENSE)
+//! [![GitHub License](https://img.shields.io/github/license/pzzld-org/rshyper?style=for-the-badge&logo=github)](https://github.com/pzzld-org/rshyper/blob/main/LICENSE)
 //!
 //! ***
 //!
@@ -61,7 +61,7 @@
 //!
 //! ## Examples
 //!
-//! For more detailed examples, please refer to the [examples directory](https://github.com/FL03/rshyper/blob/main/rshyper/examples).
+//! For more detailed examples, please refer to the [examples directory](https://github.com/pzzld-org/rshyper/blob/main/rshyper/examples).
 //!
 //! ### _Example 1: Basic Usage_
 //!

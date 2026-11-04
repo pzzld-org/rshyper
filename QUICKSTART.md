@@ -53,7 +53,7 @@ rustup target add wasm32-unknown-unknown wasm32-p1 wasm32-p2
 Start by cloning the repository:
 
 ```bash
-git clone https://github.com/FL03/rshyper.git -b main --depth 1
+git clone https://github.com/pzzld-org/rshyper.git -b main --depth 1
 ```
 
 Then, navigate to the project directory:

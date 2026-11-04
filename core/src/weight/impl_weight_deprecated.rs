@@ -6,7 +6,7 @@ use crate::weight::Weight;
 
 impl<T> Weight<T> {
     #[inline]
-    #[deprecated(since = "0.1.10", note = "use `value` instead")]
+    #[deprecated(since = "0.2.0", note = "use `value` instead")]
     pub fn into_inner(self) -> T {
         self.0
     }

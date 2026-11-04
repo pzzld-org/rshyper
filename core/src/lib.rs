@@ -11,8 +11,8 @@
 #![crate_name = "rshyper_core"]
 #![crate_type = "lib"]
 #![doc(
-    html_logo_url = "https://raw.githubusercontent.com/FL03/rshyper/main/.artifacts/assets/logo.svg",
-    html_favicon_url = "https://raw.githubusercontent.com/FL03/rshyper/main/.artifacts/assets/logo.svg"
+    html_logo_url = "https://raw.githubusercontent.com/pzzld-org/rshyper/main/.artifacts/assets/logo.svg",
+    html_favicon_url = "https://raw.githubusercontent.com/pzzld-org/rshyper/main/.artifacts/assets/logo.svg"
 )]
 #![allow(
     clippy::missing_errors_doc,

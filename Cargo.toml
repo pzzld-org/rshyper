@@ -20,7 +20,7 @@ categories = [
 ]
 description = "This crate focuses on hypergraphs"
 edition = "2024"
-homepage = "https://github.com/FL03/rshyper/wiki"
+homepage = "https://github.com/pzzld-org/rshyper/wiki"
 keywords = [
   "hypergraph",
   "graph",
@@ -28,7 +28,7 @@ keywords = [
 ]
 license = "Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/FL03/rshyper.git"
+repository = "https://github.com/pzzld-org/rshyper.git"
 rust-version = "1.85.0"
 version = "0.2.0"
 

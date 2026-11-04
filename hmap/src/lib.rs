@@ -38,7 +38,7 @@
 //!
 //! ## Examples
 //!
-//! For more detailed examples, please refer to the [examples directory](https://github.com/FL03/rshyper/blob/main/rshyper/examples).
+//! For more detailed examples, please refer to the [examples directory](https://github.com/pzzld-org/rshyper/blob/main/rshyper/examples).
 //!
 //! ### _Example #1: Basic Usage_
 //!
@@ -62,8 +62,8 @@
 #![crate_name = "rshyper_hmap"]
 #![crate_type = "lib"]
 #![doc(
-    html_logo_url = "https://raw.githubusercontent.com/FL03/rshyper/main/.artifacts/assets/logo.svg",
-    html_favicon_url = "https://raw.githubusercontent.com/FL03/rshyper/main/.artifacts/assets/logo.svg"
+    html_logo_url = "https://raw.githubusercontent.com/pzzld-org/rshyper/main/.artifacts/assets/logo.svg",
+    html_favicon_url = "https://raw.githubusercontent.com/pzzld-org/rshyper/main/.artifacts/assets/logo.svg"
 )]
 #![allow(
     clippy::missing_errors_doc,

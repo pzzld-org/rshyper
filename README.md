@@ -25,7 +25,7 @@ For the released crate:
 rshyper = { version = "0.2.0", features = ["hyper_map", "macros"] }
 ```
 
-See the [examples directory](rshyper/examples), the [crate documentation](https://docs.rs/rshyper), whose examples compile as doctests, and [QUICKSTART.md](QUICKSTART.md). The API is pre-1.0 and may change between minor versions.
+See the [examples directory](https://github.com/pzzld-org/rshyper/tree/main/rshyper/examples), the [crate documentation](https://docs.rs/rshyper), whose examples compile as doctests, and [QUICKSTART.md](https://github.com/pzzld-org/rshyper/blob/main/QUICKSTART.md). The API is pre-1.0 and may change between minor versions.
 
 ## Development
 
@@ -38,16 +38,15 @@ nix flake check --no-write-lock-file
 nix build --no-write-lock-file
 ```
 
-**These are required validation targets, not an assertion that the current draft passes.** Until [#108](https://github.com/pzzld-org/rshyper/issues/108) is accepted, the toolchain/flake selection is floating and the full CI/feature matrix is unqualified. Check local `rust-toolchain.toml`, `flake.nix`, `flake.lock`, the Cargo feature graph and CI before attempting nightly/no_std or WASM-specific targets.
+**These are the validation targets.** The toolchain pin and the full CI/feature matrix are still open under [#108](https://github.com/pzzld-org/rshyper/issues/108). Check local `rust-toolchain.toml`, `flake.nix`, `flake.lock`, the Cargo feature graph and CI before attempting nightly/no_std or WASM-specific targets.
 
 ## Project coordination
 
-- [AGENTS.md](AGENTS.md): agent worktree, source-custody and acceptance contract.
-- [Draft patch handoff](.artifacts/docs/v0.2.0-handoff.md): existing branches, prioritized release gates and low-quota CC execution.
+- [AGENTS.md](https://github.com/pzzld-org/rshyper/blob/main/AGENTS.md): agent worktree, source-custody and acceptance contract.
 - [Puzzled Linear project](https://linear.app/pzzld/project/rshyper-6605c340fb75): objectives/milestones.
 - [GitHub issues](https://github.com/pzzld-org/rshyper/issues): engineering and test evidence.
 - Silo project `rshyper`: maintained formal semantic contract and research notes; external consumers such as Chaos own storage and execution.
 
-Contributions should include reproducible failures/tests, exact environment, and compatibility notes. See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+Contributions should include reproducible failures/tests, exact environment, and compatibility notes. See [CONTRIBUTING.md](https://github.com/pzzld-org/rshyper/blob/main/CONTRIBUTING.md) and [SECURITY.md](https://github.com/pzzld-org/rshyper/blob/main/SECURITY.md).
 
-Licensed under [Apache-2.0](LICENSE).
+Licensed under [Apache-2.0](https://github.com/pzzld-org/rshyper/blob/main/LICENSE).
