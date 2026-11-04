@@ -195,13 +195,33 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn test_tracker_rejects_ids_kept_after_partial_retain() -> crate::Result<()> {
+        let mut history = IndexTracker::<usize>::zero();
+        let e0 = history.next_edge()?;
+        history.add_edge(e0);
+        // drop only one of the two copies of `e0`
+        let mut seen = false;
+        history.retain_edges(|_| !core::mem::replace(&mut seen, true));
+        assert_eq!(history.edges(), &[e0]);
+        history.set_cursor(IndexFrame::zero());
+        assert!(matches!(
+            history.next_edge(),
+            Err(IndexError::DuplicateIndex)
+        ));
+        Ok(())
+    }
+
     #[cfg(feature = "json")]
     #[test]
     fn test_tracker_serde_rebuilds_mirror() -> crate::Result<()> {
         let mut history = IndexTracker::<usize>::zero();
         history.next_vertex()?;
         let json = serde_json::to_string(&history)?;
-        assert!(!json.contains("_set"), "the mirror must not be serialized");
+        assert!(
+            !json.contains("_counts"),
+            "the mirror must not be serialized"
+        );
         let mut history: IndexTracker<usize> = serde_json::from_str(&json)?;
         history.set_cursor(IndexFrame::zero());
         assert!(matches!(

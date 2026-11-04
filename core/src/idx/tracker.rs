@@ -5,12 +5,13 @@
 use super::{EdgeId, IndexFrame, RawIndex, VertexId};
 use crate::AddStep;
 use crate::idx::error::{IndexError, IndexResult};
-use alloc::collections::BTreeSet;
+use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 
 /// the [`IndexTracker`] keeps a history of the created indices and the current cursor position.
 ///
-/// Each history is mirrored by a set so that [`next_edge`](Self::next_edge) and
+/// Each history is mirrored by a count of every id it holds (duplicates included) so that
+/// [`next_edge`](Self::next_edge) and
 /// [`next_vertex`](Self::next_vertex) reject recorded ids in `O(log h)`. Every method keeps the
 /// two in sync except the raw accessors ([`edges_mut`](Self::edges_mut),
 /// [`nodes_mut`](Self::nodes_mut), [`edge_mut`](Self::edge_mut) and
@@ -33,12 +34,12 @@ where
     pub(crate) cursor: IndexFrame<Ix>,
     pub(crate) edges: Vec<EdgeId<Ix>>,
     pub(crate) nodes: Vec<VertexId<Ix>>,
-    /// mirrors `edges` for membership checks
+    /// counts each id in `edges` for membership checks
     #[cfg_attr(feature = "serde", serde(skip))]
-    pub(crate) edge_set: BTreeSet<Ix>,
-    /// mirrors `nodes` for membership checks
+    pub(crate) edge_counts: BTreeMap<Ix, usize>,
+    /// counts each id in `nodes` for membership checks
     #[cfg_attr(feature = "serde", serde(skip))]
-    pub(crate) node_set: BTreeSet<Ix>,
+    pub(crate) node_counts: BTreeMap<Ix, usize>,
 }
 
 impl<Ix> IndexTracker<Ix>
@@ -58,8 +59,8 @@ where
             cursor,
             edges: Vec::new(),
             nodes: Vec::new(),
-            edge_set: BTreeSet::new(),
-            node_set: BTreeSet::new(),
+            edge_counts: BTreeMap::new(),
+            node_counts: BTreeMap::new(),
         }
     }
     /// create a new history with the cursor initialized to `1`
@@ -114,7 +115,7 @@ where
     where
         Ix: Clone + Ord,
     {
-        self.edge_set = edges.iter().map(|id| id.get().clone()).collect();
+        self.edge_counts = tally(edges.iter().map(|id| id.get()));
         self.edges = edges;
         self
     }
@@ -124,7 +125,7 @@ where
     where
         Ix: Clone + Ord,
     {
-        self.node_set = nodes.iter().map(|id| id.get().clone()).collect();
+        self.node_counts = tally(nodes.iter().map(|id| id.get()));
         self.nodes = nodes;
         self
     }
@@ -157,7 +158,7 @@ where
     where
         Ix: Clone + Ord,
     {
-        self.edge_set.insert(index.get().clone());
+        *self.edge_counts.entry(index.get().clone()).or_insert(0) += 1;
         self.edges_mut().push(index);
         self
     }
@@ -167,7 +168,7 @@ where
     where
         Ix: Clone + Ord,
     {
-        self.node_set.insert(index.get().clone());
+        *self.node_counts.entry(index.get().clone()).or_insert(0) += 1;
         self.nodes_mut().push(index);
         self
     }
@@ -179,8 +180,8 @@ where
         // clear the nodes and edges
         self.edges_mut().clear();
         self.nodes_mut().clear();
-        self.edge_set.clear();
-        self.node_set.clear();
+        self.edge_counts.clear();
+        self.node_counts.clear();
         // reset the cursor to the initial position
         self.cursor_mut().reset();
         // return a mutable reference
@@ -263,12 +264,12 @@ where
         Ix: Ord,
     {
         let Self {
-            edges, edge_set, ..
+            edges, edge_counts, ..
         } = self;
         edges.retain(|id| {
             let keep = f(id);
             if !keep {
-                edge_set.remove(id.get());
+                untally(edge_counts, id.get());
             }
             keep
         });
@@ -281,12 +282,12 @@ where
         Ix: Ord,
     {
         let Self {
-            nodes, node_set, ..
+            nodes, node_counts, ..
         } = self;
         nodes.retain(|id| {
             let keep = f(id);
             if !keep {
-                node_set.remove(id.get());
+                untally(node_counts, id.get());
             }
             keep
         });
@@ -300,7 +301,7 @@ where
         Ix: AddStep<Output = Ix> + Clone + Ord,
     {
         // check the on-deck index before stepping so a rejection leaves the cursor untouched
-        if self.edge_set.contains(self.cursor().edge().get()) {
+        if self.edge_counts.contains_key(self.cursor().edge().get()) {
             return Err(IndexError::DuplicateIndex);
         }
         // step the current edge cursor forward before replacing and returning
@@ -320,7 +321,7 @@ where
         Ix: AddStep<Output = Ix> + Clone + Ord,
     {
         // check the on-deck index before stepping so a rejection leaves the cursor untouched
-        if self.node_set.contains(self.cursor().node().get()) {
+        if self.node_counts.contains_key(self.cursor().node().get()) {
             return Err(IndexError::DuplicateIndex);
         }
         // step the current node cursor forward before replacing and returning
@@ -381,6 +382,27 @@ where
         Ix: AddStep<Output = Ix> + Copy + Ord,
     {
         self.next_vertex()
+    }
+}
+
+/// counts each id, duplicates included
+fn tally<'a, Ix>(ids: impl IntoIterator<Item = &'a Ix>) -> BTreeMap<Ix, usize>
+where
+    Ix: 'a + Clone + Ord,
+{
+    let mut counts = BTreeMap::new();
+    ids.into_iter()
+        .for_each(|id| *counts.entry(id.clone()).or_insert(0) += 1);
+    counts
+}
+
+/// drops one occurrence of `id`, removing it once none remain
+fn untally<Ix: Ord>(counts: &mut BTreeMap<Ix, usize>, id: &Ix) {
+    if let Some(n) = counts.get_mut(id) {
+        *n -= 1;
+        if *n == 0 {
+            counts.remove(id);
+        }
     }
 }
 
