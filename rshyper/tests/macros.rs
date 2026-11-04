@@ -82,3 +82,60 @@ fn test_hyperedge_on_hg() -> rshyper::Result<()> {
     // finish
     Ok(())
 }
+
+/// #125: each documented `# Panics` case of the macros
+mod panics {
+    use rshyper::HyperMap;
+    use rshyper::idx::VertexId;
+
+    #[test]
+    #[should_panic(expected = "Failed to insert edge")]
+    fn hyperedge_with_an_unknown_vertex() {
+        let mut graph = HyperMap::<usize, usize>::undirected();
+        let v0 = graph.add_vertex().unwrap();
+        let ghost = VertexId::new(99);
+        rshyper::hyperedge! { graph { let _e: [v0, ghost]; } }
+    }
+
+    #[test]
+    #[should_panic(expected = "Failed to insert edge")]
+    fn hyperedge_with_no_members() {
+        let mut graph = HyperMap::<usize, usize>::undirected();
+        rshyper::hyperedge! { graph { let _e: [] = 1; } }
+    }
+
+    #[test]
+    #[should_panic(expected = "Failed to insert edge")]
+    fn hypergraph_with_an_unknown_vertex() {
+        let ghost = VertexId::new(99);
+        rshyper::hypergraph! {
+            let mut graph: HyperMap<usize, usize> {
+                nodes: { let v0; };
+                edges: { let _e: [v0, ghost]; };
+            }
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "Failed to insert edge")]
+    fn hyperedge_on_an_exhausted_index() {
+        let mut graph = rshyper::UnHyperMap::<usize, usize, u8>::undirected();
+        let v0 = graph.add_vertex().unwrap();
+        // fill the u8 edge-id space; bounded, so a missing error fails instead of hanging
+        let n = (0..=256)
+            .take_while(|_| graph.add_link([v0]).is_ok())
+            .count();
+        assert!(n <= 256, "{n}");
+        rshyper::hyperedge! { graph { let _e: [v0]; } }
+    }
+
+    #[test]
+    #[should_panic(expected = "Failed to insert node")]
+    fn hypernode_on_an_exhausted_index() {
+        let mut graph = rshyper::UnHyperMap::<usize, usize, u8>::undirected();
+        // fill the u8 id space; bounded, so a missing error fails instead of hanging
+        let n = (0..=256).take_while(|_| graph.add_vertex().is_ok()).count();
+        assert!(n <= 256, "{n}");
+        rshyper::hypernode! { graph { let _v; } }
+    }
+}

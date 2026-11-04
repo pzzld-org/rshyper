@@ -14,6 +14,14 @@
 /// maintained within the [`rshyper` crate docs][rshyper-macros].
 ///
 /// [rshyper-macros]: https://docs.rs/rshyper/latest/rshyper/#example-2-macros
+///
+/// # Panics
+///
+/// The expansion `let`-binds every node and edge, so it cannot return a `Result`. It panics
+/// whenever an insertion returns an error: a node or edge id that cannot be allocated (the
+/// index type is exhausted, or the cursor was moved onto a recorded id), an edge naming an
+/// unknown vertex (`NodeNotFound`), or an edge with an empty member list (`EmptyHyperedge`).
+/// Use `add_node` and `add_edge` directly to handle these as errors.
 #[macro_export]
 macro_rules! hypergraph {
     (
@@ -66,6 +74,14 @@ macro_rules! hypergraph {
 /// maintained within the [`rshyper` crate docs][rshyper-macros].
 ///
 /// [rshyper-macros]: https://docs.rs/rshyper/latest/rshyper/#example-2-macros
+///
+/// # Panics
+///
+/// The expansion `let`-binds every edge, so it cannot return a `Result`. It panics whenever
+/// an insertion returns an error: an edge naming an unknown vertex (`NodeNotFound`), an edge
+/// with an empty member list (`EmptyHyperedge`), or an edge id that cannot be allocated (the
+/// index type is exhausted, or the cursor was moved onto a recorded id). Use `add_edge` or
+/// `add_link` directly to handle these as errors.
 #[macro_export]
 macro_rules! hyperedge {
     ($src:ident { $(let $edge:ident: [$($var:ident),*] $(= $w:expr)?);* $(;)? }) => {
@@ -107,6 +123,12 @@ macro_rules! hyperedge {
 /// maintained within the [`rshyper` crate docs][rshyper-macros].
 ///
 /// [rshyper-macros]: https://docs.rs/rshyper/latest/rshyper/#example-2-macros
+///
+/// # Panics
+///
+/// The expansion `let`-binds every node, so it cannot return a `Result`. It panics whenever
+/// a node id cannot be allocated: the index type is exhausted, or the cursor was moved onto
+/// a recorded id. Use `add_node` or `add_vertex` directly to handle this as an error.
 #[macro_export]
 macro_rules! hypernode {
     ($src:ident { $(let $var:ident $(= $w:expr)?);* $(;)? }) => {

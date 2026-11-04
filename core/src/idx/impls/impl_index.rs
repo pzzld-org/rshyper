@@ -139,15 +139,15 @@ where
         self.value -= T::one();
     }
     /// increments the index value by [one](One) and consumes the current instance
-    /// to create another with the new value.
+    /// to create another with the new value. It overflows exactly as `+` does on `T`; use
+    /// [`step`](IndexBase::step) for a checked increment.
     #[inline]
     pub fn inc(self) -> IndexBase<<T as core::ops::Add>::Output, K>
     where
         T: core::ops::Add + One,
         <T as core::ops::Add>::Output: RawIndex,
     {
-        self.next_with(|prev| prev + T::one())
-            .expect("Failed to increment index")
+        IndexBase::new(self.value + T::one())
     }
     /// mutably increments the index value by [`1`](One)
     #[inline]
