@@ -160,7 +160,9 @@ where
     /// increments the current index and returns the previous instance of the index.
     ///
     /// ```rust
-    ///     use rshyper_core::EdgeId;
+    /// use rshyper_core::EdgeId;
+    ///
+    /// fn main() -> rshyper_core::Result<()> {
     ///     let mut edge_id = EdgeId::<usize>::zero();
     ///     let e0 = edge_id.step()?;
     ///     let e1 = edge_id.step()?;
@@ -168,6 +170,8 @@ where
     ///     assert_eq!(e0.get(), &0);
     ///     assert_eq!(e1.get(), &1);
     ///     assert_eq!(e2.get(), &2);
+    ///     Ok(())
+    /// }
     /// ```
     #[inline]
     pub fn step(&mut self) -> Result<Self, IndexError>

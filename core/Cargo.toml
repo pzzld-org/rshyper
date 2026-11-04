@@ -28,7 +28,6 @@ tag-name = "{{version}}"
 bench = false
 crate-type = ["lib"]
 doc = true
-doctest = false
 test = true
 
 [dependencies]
