@@ -37,6 +37,10 @@ name = "hyper_map"
 required-features = ["hyper_map", "macros", "tracing"]
 
 [[test]]
+name = "algo"
+required-features = ["algo", "hyper_map"]
+
+[[test]]
 name = "macros"
 required-features = ["hyper_map", "macros"]
 
@@ -69,7 +73,7 @@ full = [
 ]
 
 # ************* [FF:Flags] *************
-algo = ["dep:rshyper-algo"]
+algo = ["dep:rshyper-algo", "rshyper-hmap?/algo"]
 
 hash_graph = ["hyper_map"]
 
