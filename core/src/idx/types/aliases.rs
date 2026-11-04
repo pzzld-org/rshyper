@@ -21,9 +21,9 @@ use std::hash::RandomState as DefaultHashBuilder;
 
 /// a type alias for a [`usize`] used to define the default index type throughout the crate.
 pub type Udx = usize;
-/// a type alias for an [`Index`] whose _kind_ is [`EdgeIndex`]
+/// a type alias for an [`IndexBase`] whose _kind_ is [`EdgeIndex`]
 pub type EdgeId<T = Udx> = IndexBase<T, EdgeIndex>;
-/// a type alias for an [`Index`] whose _kind_ is [`VertexIndex`]
+/// a type alias for an [`IndexBase`] whose _kind_ is [`VertexIndex`]
 pub type VertexId<T = Udx> = IndexBase<T, VertexIndex>;
 /// a type alias for a fixed sized array of [`IndexBase`]
 pub type IndexArray<T, const N: usize, K = VertexIndex> = [IndexBase<T, K>; N];
@@ -64,17 +64,20 @@ mod use_alloc {
 }
 
 #[cfg(all(feature = "alloc", feature = "nightly"))]
+#[clippy::msrv = "1.100"]
 mod use_alloc {
     use crate::idx::VertexId;
 
+    use alloc::alloc::Global;
     use alloc::collections::{BTreeSet, VecDeque};
     use alloc::vec::Vec;
 
+    // `A` defaults to `Global` so `VertexVec<Ix>` is the same type with or without `nightly`
     /// a type alias for a [`Vec`] of [`VertexId`] that is generic over the index type `I` and
     /// the allocator `A`
-    pub type VertexVec<I, A> = Vec<VertexId<I>, A>;
+    pub type VertexVec<I, A = Global> = Vec<VertexId<I>, A>;
     /// a type alias for a [`VertexId`] stored in a [`VecDeque`]
-    pub type VertexDeque<Ix, A> = VecDeque<VertexId<Ix>, A>;
+    pub type VertexDeque<Ix, A = Global> = VecDeque<VertexId<Ix>, A>;
     /// a type alias for a [`VertexId`] stored in a [`BTreeSet`]
-    pub type VertexBSet<Ix, A> = BTreeSet<VertexId<Ix>, A>;
+    pub type VertexBSet<Ix, A = Global> = BTreeSet<VertexId<Ix>, A>;
 }

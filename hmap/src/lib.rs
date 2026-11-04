@@ -8,10 +8,10 @@
 //!
 //! - `N`: the type of weight associated with a hypernode
 //! - `E`: the type of weight associated with a hyperedge
-//! - `A`: the attributes of the graph are implementors of the [`GraphProps`] trait
+//! - `A`: the attributes of the graph are implementors of the [`GraphProps`](rshyper::GraphProps) trait
 //!   - `A::Kind`: the _kind_ of hypergraph, either [`Directed`](rshyper::Directed) or [`Undirected`](rshyper::Undirected)
-//!   - `A::Ix`: the type of indices used by the instance; bounded by the [`RawIndex` trait
-//! - `S`: the type of [`BuildHasher`] used for the underling stores
+//!   - `A::Ix`: the type of indices used by the instance; bounded by the [`RawIndex`](rshyper::RawIndex) trait
+//! - `S`: the type of [`BuildHasher`](core::hash::BuildHasher) used for the underling stores
 //!
 //! This is done to maximize compatibility and flexibility, allowing users to define their own
 //! hypergraphs with custom node and edge types, as well as different index types and hashers.
@@ -24,7 +24,7 @@
 //! available within the crate versus the standard [`HashMap`](std::collections::HashMap)
 //! implementation. That being said, it is important to note that for any applications where
 //! security it a concerin it is highly recommended to use the [`RandomState`](std::hash::RandomState)
-//! as the default hasher in lieu of the [`DefaultHashBuilder`] from [`foldhash`](https://crates.io/crates/foldhash)
+//! as the default hasher in lieu of the [`DefaultHashBuilder`](hashbrown::DefaultHashBuilder) from [`foldhash`](https://crates.io/crates/foldhash)
 //! as it fails to prevent against attacks such as `Hash-DoS`. See the [`hashbrown`](https://crates.io/crates/hashbrown)
 //! for more information on the security implications of using a custom hasher.
 //!
@@ -75,7 +75,6 @@
     clippy::should_implement_trait
 )]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(feature = "nightly", feature(allocator_api))]
 // compile check
 #[cfg(not(any(feature = "alloc", feature = "std")))]
 compile_error! { "either the `alloc` or `std` feature must be enabled for the rshyper crate" }

@@ -9,7 +9,7 @@
 use alloc::boxed::Box;
 use rshyper::error::Error as CoreError;
 use rshyper::idx::RawIndex;
-/// a type alias for a [Result] with the crate-specific error type [`AlgoError`]
+/// a type alias for a [Result] with the crate-specific error type [`Error`]
 pub type Result<T = ()> = core::result::Result<T, Error>;
 
 /// The [`Error`] type enumerates the various errors encountered by algorithms and operators on
